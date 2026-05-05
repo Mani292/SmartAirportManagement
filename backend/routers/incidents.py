@@ -66,27 +66,44 @@ def create_incident(data: IncidentCreate):
             data.department
         )
 
-        # Step 2 — Build ServiceNow payload
+        # Step 2 — Build ServiceNow payload using ONLY standard incident fields
+        # Custom fields (u_department, u_area, etc.) may not exist in the instance
+        # and can trigger Business Rules. Store metadata in description/work_notes.
+        ai_notes = (
+            f"🤖 AI Triage Result:\n"
+            f"  Team: {triage['assigned_team']}\n"
+            f"  Category: {triage['category']}\n"
+            f"  Priority: P{triage['priority']}\n"
+            f"  Estimated Fix: {triage['estimated_fix_mins']} mins\n"
+            f"  Safety Risk: {triage['safety_risk']}\n"
+            f"  Recommended Action: {triage['recommended_action']}\n\n"
+            f"📍 Location: {data.location} — {data.area}\n"
+            f"📱 Reported via: {data.reported_via}\n"
+            f"📞 Reporter Phone: {data.reporter_phone or 'N/A'}\n"
+            f"📧 Reporter Email: {data.reporter_email or 'N/A'}"
+        )
+
         payload = {
-            "short_description": data.short_description,
+            "short_description": f"[{triage['assigned_team']}] {data.short_description}",
+            "description": f"Reported from: {data.location} — {data.area}\n\n{ai_notes}",
             "priority": triage["priority"],
             "category": triage["category"],
             "location": data.location,
-            "u_area": data.area,
-            "u_department": triage["assigned_team"],
-            "u_ai_category": triage["category"],
-            "u_reported_via": data.reported_via,
-            "u_safety_risk": str(triage["safety_risk"]),
-            "u_estimated_fix_mins": str(triage["estimated_fix_mins"]),
-            "u_recommended_action": triage["recommended_action"],
-            "assignment_group": triage["assigned_team"],
-            "assigned_to": triage["assigned_team"],
-            "u_reporter_phone": data.reporter_phone,
+            "work_notes": ai_notes,
+            "impact": "2",
+            "urgency": "2",
         }
 
         # Step 3 — Create in ServiceNow
         result = sn.create_incident(payload)
-        inc_number = result.get("result", {}).get("number", "")
+
+        # Handle failure
+        if result.get("status") == "failure" or "error" in result:
+            err_detail = result.get("error", {}).get("detail", str(result))
+            raise Exception(f"ServiceNow error: {err_detail}")
+
+        inc_number = result.get("result", {}).get("number", "INC-PENDING")
+        inc_sys_id = result.get("result", {}).get("sys_id", "")
 
         whatsapp_sent = False
         email_sent = False
@@ -118,6 +135,8 @@ def create_incident(data: IncidentCreate):
 
         return {
             "success": True,
+            "incident_number": inc_number,
+            "incident_sys_id": inc_sys_id,
             "incident": result,
             "ai_triage": triage,
             "notifications": {
@@ -128,6 +147,7 @@ def create_incident(data: IncidentCreate):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.patch("/{sys_id}")
 def update_incident(sys_id: str, update: IncidentUpdate):

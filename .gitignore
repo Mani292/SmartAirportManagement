@@ -1,12 +1,58 @@
-# Python
-backend/venv/
-backend/__pycache__/
-backend/.env
+# SmartAirportManagement — Git Ignore
 
-# React Native
-mobile/node_modules/
-mobile/.expo/
+# ── Python ──
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+.venv/
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
 
-# General
+# ── Environment ──
+.env
+*.env.local
+*.env.development
+*.env.production
+
+# ── Node / React ──
+node_modules/
+dist/
+.expo/
+.expo-shared/
+*.tsbuildinfo
+
+# ── Mobile ──
+android/
+ios/
+.gradle/
+*.keystore
+*.jks
+
+# ── IDE ──
+.vscode/
+.idea/
+*.swp
+*.swo
 .DS_Store
+Thumbs.db
+
+# ── Logs ──
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── Test / scratch ──
+test_*.py
+scratch/
+
+# ── QR / Generated ──
+*.png.qr
+generated_qr/

@@ -43,53 +43,92 @@ export default function ReportIssue() {
   };
 
   if (success) {
-    const incNumber = success.incident?.result?.number || 'INC-PENDING';
+    const incNumber = success.incident_number || success.incident?.result?.number || 'INC-PENDING';
     const triage = success.ai_triage;
+    const teamColors: Record<string, string> = {
+      Electrical: '#EAB308', Plumbing: '#3B82F6', Security: '#EF4444',
+      Facilities: '#8B5CF6', IT: '#06B6D4', HR: '#EC4899', General: '#10B981'
+    };
+    const teamColor = teamColors[triage?.assigned_team] || '#0EA5E9';
     
     return (
       <div className="mobile-container animate-fade-up" style={{ justifyContent: 'center', padding: 24 }}>
         <div className="glass-panel" style={{ padding: 32, borderRadius: 'var(--radius-lg)', textAlign: 'center' }}>
-          <div style={{
-            width: 80, height: 80, borderRadius: 'var(--radius-full)',
-            background: 'var(--color-success)', margin: '0 auto 24px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>
-            <Plane color="white" size={40} />
+          {/* Success icon */}
+          <div style={{ width: 80, height: 80, borderRadius: 'var(--radius-full)', background: 'rgba(16,185,129,0.15)', border: '2px solid #10B981', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontSize: 36 }}>✓</span>
           </div>
-          <h2 className="brand-text" style={{ fontSize: '1.75rem', marginBottom: 8, color: '#0EA5E9' }}>Issue Reported</h2>
-          <p style={{ color: 'var(--color-text-secondary)', marginBottom: 24, fontSize: '1.1rem' }}>
-            Thank you! Staff have been notified.
+          <h2 className="brand-text" style={{ fontSize: '1.75rem', marginBottom: 8, color: '#10B981' }}>Issue Reported!</h2>
+          <p style={{ color: 'var(--color-text-secondary)', marginBottom: 24 }}>
+            Our team has been notified and is on the way.
           </p>
           
-          <div style={{ background: 'rgba(0,0,0,0.3)', padding: 16, borderRadius: 'var(--radius-md)', marginBottom: 24 }}>
-            <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Incident Number</p>
-            <p className="brand-text" style={{ fontSize: '1.5rem', fontWeight: 800 }}>{incNumber}</p>
+          {/* Incident number */}
+          <div style={{ background: 'rgba(14,165,233,0.1)', border: '1px solid rgba(14,165,233,0.3)', padding: '16px 20px', borderRadius: 'var(--radius-md)', marginBottom: 20 }}>
+            <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Your Incident Number</p>
+            <p className="brand-text" style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0EA5E9', letterSpacing: '0.1em' }}>{incNumber}</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: 4 }}>Save this to track your issue</p>
           </div>
 
+          {/* AI Triage */}
           {triage && (
-             <div style={{ background: 'var(--color-bg-elevated)', padding: 16, borderRadius: 'var(--radius-md)', textAlign: 'left', marginBottom: 24 }}>
-                 <p style={{ color: '#0EA5E9', fontWeight: 600, marginBottom: 8 }}>⚡ AeroBot Analysis</p>
-                 <p style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>Priority: {triage.priority}</p>
-                 <p style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>Est. Fix Time: {triage.estimated_fix_mins} mins</p>
-             </div>
+            <div style={{ background: 'var(--color-bg-elevated)', borderRadius: 'var(--radius-md)', textAlign: 'left', marginBottom: 20, overflow: 'hidden', borderLeft: `4px solid ${teamColor}` }}>
+              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-border)' }}>
+                <p style={{ color: '#0EA5E9', fontWeight: 700, fontSize: '0.85rem' }}>⚡ AeroBot Triage</p>
+              </div>
+              <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>Assigned Team</span>
+                  <span style={{ color: teamColor, fontWeight: 700, fontSize: '0.85rem' }}>{triage.assigned_team}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>Est. Fix Time</span>
+                  <span style={{ color: 'var(--color-text-primary)', fontWeight: 600, fontSize: '0.85rem' }}>{triage.estimated_fix_mins} mins</span>
+                </div>
+                {triage.safety_risk && (
+                  <div style={{ background: 'rgba(239,68,68,0.1)', padding: '8px 12px', borderRadius: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <span>⚠️</span>
+                    <span style={{ color: '#EF4444', fontSize: '0.8rem', fontWeight: 600 }}>Safety risk flagged — priority response</span>
+                  </div>
+                )}
+              </div>
+            </div>
           )}
 
-          <div style={{ display: 'flex', gap: 12 }}>
-            {success.notifications?.email_sent && (
-               <span style={{ fontSize: '0.75rem', color: 'var(--color-success)' }}>✓ Email confirmation sent</span>
-            )}
-            {success.notifications?.whatsapp_sent && (
-               <span style={{ fontSize: '0.75rem', color: 'var(--color-success)' }}>✓ WhatsApp updates active</span>
-            )}
-          </div>
+          {/* Notifications */}
+          {(success.notifications?.email_sent || success.notifications?.whatsapp_sent) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
+              {success.notifications.email_sent && (
+                <span style={{ fontSize: '0.8rem', color: '#10B981', display: 'flex', gap: 8, alignItems: 'center' }}>
+                  ✓ Email confirmation sent
+                </span>
+              )}
+              {success.notifications.whatsapp_sent && (
+                <span style={{ fontSize: '0.8rem', color: '#10B981', display: 'flex', gap: 8, alignItems: 'center' }}>
+                  ✓ WhatsApp updates active
+                </span>
+              )}
+            </div>
+          )}
           
-          <button className="glass-button" style={{ marginTop: 24 }} onClick={() => { setSuccess(null); setDesc(''); }}>
-            Report Another Issue
-          </button>
+          {/* Action buttons */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <button
+              className="glass-button"
+              style={{ background: 'rgba(14,165,233,0.15)', border: '1px solid rgba(14,165,233,0.4)', color: '#0EA5E9' }}
+              onClick={() => navigate(`/track?number=${incNumber}`)}
+            >
+              🔍 Track My Issue
+            </button>
+            <button className="glass-button" onClick={() => { setSuccess(null); setDesc(''); setProblemType('General'); }}>
+              Report Another Issue
+            </button>
+          </div>
         </div>
       </div>
     );
   }
+
 
   return (
     <div className="mobile-container">

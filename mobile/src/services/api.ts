@@ -1,7 +1,23 @@
 import axios from "axios";
+import { Platform } from "react-native";
 
-const BASE_URL = "http://192.168.31.230:8000/api";
-// 192.168.31.230 = local WiFi IP for physical device testing
+// ── API Configuration ──────────────────────────────────────────────────────
+// For local development on a physical device, set your machine's local IP.
+// For production, point this to your deployed backend URL.
+// Android emulator must use 10.0.2.2 instead of 127.0.0.1/localhost.
+const getBaseUrl = () => {
+    // Production URL (set this to your deployed backend)
+    // e.g., "https://api.yourdomain.com/api"
+    // return "https://api.yourdomain.com/api";
+
+    // Local development fallback
+    if (Platform.OS === "android") {
+        return "http://10.0.2.2:8000/api"; // Android emulator
+    }
+    return "http://192.168.31.230:8000/api"; // Local WiFi IP — change to your machine's IP
+};
+
+const BASE_URL = getBaseUrl();
 
 const api = axios.create({
     baseURL: BASE_URL,
@@ -10,6 +26,19 @@ const api = axios.create({
         "Content-Type": "application/json",
     },
 });
+
+// Global response interceptor for error logging
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response) {
+            console.error(`[API Error] ${error.config?.url} → ${error.response.status}:`, error.response.data);
+        } else if (error.request) {
+            console.error("[API Error] No response received. Is the backend running?", error.message);
+        }
+        return Promise.reject(error);
+    }
+);
 
 // ── AUTH ──
 export const loginApi = (data: { username: string; password: string }) =>

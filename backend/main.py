@@ -34,5 +34,11 @@ def root():
     return {
         "app": "Smart Airport Management",
         "status": "running",
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "docs": "/docs"
     }
+
+@app.get("/health")
+def health():
+    """Health check endpoint for load balancers and uptime monitors."""
+    return {"status": "healthy", "service": "smart-airport-api"}
