@@ -108,3 +108,27 @@ def send_daily_summary(to, total, resolved, overdue):
   </div>
 </div>"""
     )
+
+def send_credentials(to, role, username, password):
+    return send_email(
+        to,
+        f"🔐 Your Smart Airport Credentials ({role})",
+        f"""
+<div style="font-family:Arial;max-width:600px;margin:auto;border:1px solid #ddd;border-radius:10px;overflow:hidden">
+  <div style="background:#0D1B3E;padding:24px">
+    <h2 style="color:white;margin:0">✈️ Smart Airport Staff Portal</h2>
+    <p style="color:#A8D8FF;margin:6px 0 0 0">Access Credentials</p>
+  </div>
+  <div style="padding:24px">
+    <p>Welcome to the Smart Airport Management team!</p>
+    <p>Your access has been approved for the role of <b>{role}</b>.</p>
+    <div style="background:#D6E8F7;padding:16px;border-radius:8px;margin-top:16px">
+      <p style="margin:0 0 8px 0"><b>Username:</b> <code>{username}</code></p>
+      <p style="margin:0"><b>Password:</b> <code>{password}</code></p>
+    </div>
+    <p style="margin-top:20px;color:#666;font-size:13px">
+      Please keep these credentials secure. Log in via the Smart Airport mobile application to access your dashboard.
+    </p>
+  </div>
+</div>"""
+    )

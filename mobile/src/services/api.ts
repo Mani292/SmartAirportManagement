@@ -14,6 +14,9 @@ const api = axios.create({
 // ── AUTH ──
 export const loginApi = (data: { username: string; password: string }) =>
     api.post("/auth/login", data);
+    
+export const requestAccessApi = (data: { role: string; email?: string; phone?: string }) =>
+    api.post("/auth/request-access", data);
 
 // ── INCIDENTS ──
 export const getIncidents = (limit = 50, department = "") =>

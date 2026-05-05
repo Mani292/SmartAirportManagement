@@ -45,3 +45,46 @@ def login(req: LoginRequest):
         }
         
     raise HTTPException(status_code=401, detail="Invalid credentials")
+
+from typing import Optional
+from email_service import send_credentials
+from whatsapp import send_credentials_wa
+
+class RequestAccess(BaseModel):
+    role: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
+
+@router.post("/request-access")
+def request_access(req: RequestAccess):
+    # Determine mock credentials based on role
+    r = req.role.lower()
+    creds = {
+        "admin": ("admin", "admin"),
+        "technician": ("tech", "tech"),
+        "security": ("security", "security"),
+        "electrician": ("electrician", "electrician"),
+        "plumber": ("plumber", "plumber"),
+        "helpstaff": ("helpstaff", "helpstaff"),
+        "manager": ("manager", "manager")
+    }
+    
+    if r not in creds:
+        raise HTTPException(status_code=400, detail="Invalid role")
+        
+    username, password = creds[r]
+    
+    email_sent = False
+    wa_sent = False
+    
+    if req.email:
+        email_sent = send_credentials(req.email, req.role, username, password)
+    if req.phone:
+        wa_sent = send_credentials_wa(req.phone, req.role, username, password)
+        
+    return {
+        "success": True,
+        "message": "Credentials dispatched",
+        "email_sent": email_sent,
+        "wa_sent": wa_sent
+    }

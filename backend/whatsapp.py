@@ -65,3 +65,16 @@ def send_sla_warning(phone, inc_number, priority):
 This incident is approaching SLA breach.
 Immediate action required!"""
     return send_whatsapp(phone, message)
+
+def send_credentials_wa(phone, role, username, password):
+    message = f"""🔐 *Smart Airport Staff Access*
+
+Welcome to the team! Your access for the role of *{role}* has been approved.
+
+👤 *Username:* {username}
+🔑 *Password:* {password}
+
+Please log in via the Smart Airport mobile application to access your dashboard and tasks.
+
+_Keep these credentials secure._"""
+    return send_whatsapp(phone, message)

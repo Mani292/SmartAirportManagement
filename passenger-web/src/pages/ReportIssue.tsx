@@ -10,6 +10,7 @@ export default function ReportIssue() {
   const areaParam = params.get('area') || '';
   
   const [desc, setDesc] = useState('');
+  const [problemType, setProblemType] = useState('General');
   const [location, setLocation] = useState(locationParam);
   const [area, setArea] = useState(areaParam);
   const [phone, setPhone] = useState('');
@@ -24,8 +25,9 @@ export default function ReportIssue() {
     
     setLoading(true);
     try {
+      const fullDesc = `[${problemType}] ${desc}`;
       const res = await reportIncident({
-        short_description: desc,
+        short_description: fullDesc,
         location,
         area,
         reported_via: 'Web_QR',
@@ -108,6 +110,22 @@ export default function ReportIssue() {
           </h2>
           
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginBottom: 8 }}>Type of Problem</label>
+              <select
+                className="glass-input"
+                value={problemType}
+                onChange={e => setProblemType(e.target.value)}
+                style={{ padding: '12px', width: '100%', appearance: 'none', background: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)' }}
+              >
+                <option value="General">General / Other</option>
+                <option value="Restroom">Restroom / Hygiene</option>
+                <option value="Security">Security / Safety</option>
+                <option value="Electrical">Electrical / Lighting</option>
+                <option value="Plumbing">Plumbing / Water</option>
+              </select>
+            </div>
+
             <div>
               <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginBottom: 8 }}>Description</label>
               <textarea 
