@@ -12,7 +12,7 @@ const authSlice = createSlice({
     name: "auth",
     initialState: {
         isLoggedIn: false,
-        role: "passenger" as UserRole,
+        role: "manager" as UserRole,
         username: "",
         userId: "",
     } as AuthState,
@@ -25,7 +25,7 @@ const authSlice = createSlice({
         },
         logout: (state) => {
             state.isLoggedIn = false;
-            state.role = "passenger";
+            state.role = "manager";
             state.username = "";
             state.userId = "";
         },

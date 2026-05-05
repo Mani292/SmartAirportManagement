@@ -1,32 +1,54 @@
 import React, { useState } from "react";
 import {
     View, Text, TouchableOpacity, StyleSheet,
-    SafeAreaView, Dimensions, StatusBar
+    SafeAreaView, Dimensions, StatusBar, TextInput, ActivityIndicator, Alert
 } from "react-native";
 import { useDispatch } from "react-redux";
 import { login } from "../../store";
 import { UserRole } from "../../types";
 import { Colors, Fonts, Radius } from "../../theme";
+import { loginApi } from "../../services/api";
 
 const { width } = Dimensions.get("window");
 
 const roles: { value: UserRole; label: string; icon: string; desc: string; color: string }[] = [
-    { value: "passenger", label: "Passenger", icon: "✈", desc: "Report & track issues", color: "#00B4FF" },
-    { value: "technician", label: "Technician", icon: "⚡", desc: "View & resolve tasks", color: "#7C3AED" },
-    { value: "manager", label: "Manager", icon: "◎", desc: "Monitor operations", color: "#FF8C00" },
-    { value: "admin", label: "Admin", icon: "⚙", desc: "System management", color: "#00D283" },
+    { value: "technician", label: "Technician", icon: "⚡", desc: "General tasks", color: "#7C3AED" },
+    { value: "security", label: "Security", icon: "🛡", desc: "Security ops", color: "#EF4444" },
+    { value: "electrician", label: "Electrician", icon: "🔌", desc: "Electrical", color: "#EAB308" },
+    { value: "plumber", label: "Plumber", icon: "🔧", desc: "Plumbing", color: "#3B82F6" },
+    { value: "helpstaff", label: "Help Staff", icon: "💁", desc: "Assistance", color: "#EC4899" },
+    { value: "manager", label: "Manager", icon: "◎", desc: "Operations", color: "#FF8C00" },
+    { value: "admin", label: "Admin", icon: "⚙", desc: "System admin", color: "#00D283" },
 ];
 
 export default function LoginScreen() {
     const dispatch = useDispatch();
-    const [selected, setSelected] = useState<UserRole>("passenger");
+    const [selected, setSelected] = useState<UserRole>("manager");
+    const [username, setUsername] = useState("");
+    const [password, setPassword] = useState("");
+    const [loading, setLoading] = useState(false);
 
-    const handleLogin = () => {
-        dispatch(login({
-            role: selected,
-            username: selected.charAt(0).toUpperCase() + selected.slice(1),
-            userId: `${selected}_001`,
-        }));
+    const handleLogin = async () => {
+        if (!username || !password) {
+            Alert.alert("Missing Fields", "Please enter both username and password.");
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const response = await loginApi({ username, password, role: selected });
+            if (response.data.success) {
+                dispatch(login({
+                    role: response.data.role as UserRole,
+                    username: response.data.username,
+                    userId: response.data.userId,
+                }));
+            }
+        } catch (error) {
+            Alert.alert("Login Failed", "Invalid credentials. Please verify your ServiceNow account details.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     const selectedRole = roles.find(r => r.value === selected)!;
@@ -56,7 +78,7 @@ export default function LoginScreen() {
 
             {/* Role Selector */}
             <View style={styles.panel}>
-                <Text style={styles.panelLabel}>Select your role</Text>
+                <Text style={styles.panelLabel}>Staff Authentication</Text>
 
                 <View style={styles.grid}>
                     {roles.map((r) => {
@@ -84,14 +106,46 @@ export default function LoginScreen() {
                     })}
                 </View>
 
+                <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>ServiceNow Username</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Enter your username"
+                        placeholderTextColor={Colors.textMuted}
+                        value={username}
+                        onChangeText={setUsername}
+                        autoCapitalize="none"
+                    />
+                </View>
+
+                <View style={[styles.inputContainer, { marginBottom: 24 }]}>
+                    <Text style={styles.inputLabel}>ServiceNow Password</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Enter your password"
+                        placeholderTextColor={Colors.textMuted}
+                        value={password}
+                        onChangeText={setPassword}
+                        secureTextEntry
+                        autoCapitalize="none"
+                    />
+                </View>
+
                 <TouchableOpacity
-                    style={[styles.loginBtn, { backgroundColor: selectedRole.color }]}
+                    style={[styles.loginBtn, { backgroundColor: selectedRole.color, opacity: loading ? 0.7 : 1 }]}
                     onPress={handleLogin}
                     activeOpacity={0.85}
+                    disabled={loading}
                 >
-                    <Text style={styles.loginBtnIcon}>{selectedRole.icon}</Text>
-                    <Text style={styles.loginBtnText}>Continue as {selectedRole.label}</Text>
-                    <Text style={styles.loginBtnArrow}>→</Text>
+                    {loading ? (
+                        <ActivityIndicator color={Colors.bg} />
+                    ) : (
+                        <>
+                            <Text style={styles.loginBtnIcon}>{selectedRole.icon}</Text>
+                            <Text style={styles.loginBtnText}>Sign in as {selectedRole.label}</Text>
+                            <Text style={styles.loginBtnArrow}>→</Text>
+                        </>
+                    )}
                 </TouchableOpacity>
 
                 <Text style={styles.footer}>Smart Airport Management v1.0</Text>
@@ -235,6 +289,24 @@ const styles = StyleSheet.create({
     loginBtnIcon: { fontSize: 18, color: Colors.bg },
     loginBtnText: { fontSize: Fonts.lg, fontWeight: "800", color: Colors.bg, flex: 1, textAlign: "center" },
     loginBtnArrow: { fontSize: 18, color: Colors.bg, fontWeight: "700" },
+    inputContainer: {
+        marginBottom: 16,
+    },
+    inputLabel: {
+        fontSize: Fonts.sm,
+        color: Colors.textSecondary,
+        marginBottom: 8,
+        fontWeight: "600",
+    },
+    input: {
+        backgroundColor: Colors.bgElevated,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        borderRadius: Radius.md,
+        padding: 14,
+        fontSize: Fonts.md,
+        color: Colors.textPrimary,
+    },
     footer: {
         textAlign: "center",
         fontSize: Fonts.xs,

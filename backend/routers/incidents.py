@@ -26,18 +26,34 @@ class RatingUpdate(BaseModel):
     rating: int
     comment: Optional[str] = ""
 
+def cleanup_snow_record(record):
+    if not isinstance(record, dict): return record
+    for k, v in record.items():
+        if isinstance(v, dict) and "value" in v:
+            record[k] = v.get("display_value", v.get("value", ""))
+    return record
+
 @router.get("/")
 def list_incidents(limit: int = 50, department: str = ""):
     query = f"u_department={department}" if department else ""
-    return sn.get_incidents(limit=limit, query=query)
+    res = sn.get_incidents(limit=limit, query=query)
+    if "result" in res and isinstance(res["result"], list):
+        res["result"] = [cleanup_snow_record(r) for r in res["result"]]
+    return res
 
 @router.get("/track/{number}")
 def track_incident(number: str):
-    return sn.get_incident_by_number(number)
+    res = sn.get_incident_by_number(number)
+    if "result" in res and isinstance(res["result"], list):
+        res["result"] = [cleanup_snow_record(r) for r in res["result"]]
+    return res
 
 @router.get("/{sys_id}")
 def get_incident(sys_id: str):
-    return sn.get_incident(sys_id)
+    res = sn.get_incident(sys_id)
+    if "result" in res and isinstance(res["result"], dict):
+        res["result"] = cleanup_snow_record(res["result"])
+    return res
 
 @router.post("/")
 def create_incident(data: IncidentCreate):
@@ -71,18 +87,42 @@ def create_incident(data: IncidentCreate):
         result = sn.create_incident(payload)
         inc_number = result.get("result", {}).get("number", "")
 
+        whatsapp_sent = False
+        email_sent = False
+
         # Step 4 — WhatsApp confirmation to passenger
         if data.reporter_phone:
-            send_confirmation(
-                data.reporter_phone,
-                inc_number,
-                data.short_description
-            )
+            try:
+                whatsapp_sent = send_confirmation(
+                    data.reporter_phone,
+                    inc_number,
+                    data.short_description
+                )
+            except Exception as wa_err:
+                print(f"[WARN] WhatsApp send failed: {wa_err}")
+
+        # Step 5 — Email task assignment notification
+        if data.reporter_email:
+            try:
+                email_sent = send_task_assignment(
+                    data.reporter_email,
+                    inc_number,
+                    data.short_description,
+                    f"{data.location} — {data.area}",
+                    str(triage["priority"]),
+                    triage["recommended_action"]
+                )
+            except Exception as email_err:
+                print(f"[WARN] Email send failed: {email_err}")
 
         return {
             "success": True,
             "incident": result,
-            "ai_triage": triage
+            "ai_triage": triage,
+            "notifications": {
+                "whatsapp_sent": whatsapp_sent,
+                "email_sent": email_sent
+            }
         }
 
     except Exception as e:
@@ -92,13 +132,19 @@ def create_incident(data: IncidentCreate):
 def update_incident(sys_id: str, update: IncidentUpdate):
     data = {k: v for k, v in update.dict().items() if v}
 
-    # If resolved — send WhatsApp to passenger
+    # If resolved — send WhatsApp + email to passenger
     if update.state == "6":
-        incident = sn.get_incident(sys_id)
-        phone = incident.get("result", {}).get("u_reporter_phone", "")
-        number = incident.get("result", {}).get("number", "")
-        if phone:
-            send_resolution(phone, number)
+        try:
+            incident = sn.get_incident(sys_id)
+            phone = incident.get("result", {}).get("u_reporter_phone", "")
+            number = incident.get("result", {}).get("number", "")
+            if phone:
+                try:
+                    send_resolution(phone, number)
+                except Exception as wa_err:
+                    print(f"[WARN] WhatsApp resolution send failed: {wa_err}")
+        except Exception as lookup_err:
+            print(f"[WARN] Could not fetch incident for notification: {lookup_err}")
 
     return sn.update_incident(sys_id, data)
 

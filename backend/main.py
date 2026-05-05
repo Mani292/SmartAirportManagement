@@ -2,7 +2,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from routers import incidents, assets, preventive, technician, ai, notifications, qrcode_router
+from routers import incidents, assets, preventive, technician, ai, notifications, qrcode_router, auth
 
 load_dotenv()
 
@@ -20,6 +20,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router,          prefix="/api/auth",       tags=["Auth"])
 app.include_router(incidents.router,     prefix="/api/incidents",  tags=["Incidents"])
 app.include_router(assets.router,        prefix="/api/assets",     tags=["Assets"])
 app.include_router(preventive.router,    prefix="/api/preventive", tags=["Preventive"])

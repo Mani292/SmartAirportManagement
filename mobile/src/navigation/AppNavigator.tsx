@@ -10,12 +10,6 @@ import { Colors } from "../theme";
 // Auth
 import LoginScreen from "../screens/auth/LoginScreen";
 
-// Passenger
-import ReportIssueScreen from "../screens/passenger/ReportIssueScreen";
-import TrackIssueScreen from "../screens/passenger/TrackIssueScreen";
-import ChatBotScreen from "../screens/passenger/ChatBotScreen";
-import QRScanScreen from "../screens/passenger/QRScanScreen";
-
 // Technician
 import MyTasksScreen from "../screens/technician/MyTasksScreen";
 import TaskDetailScreen from "../screens/technician/TaskDetailScreen";
@@ -50,28 +44,6 @@ const tabScreenOptions = {
     },
 };
 
-function PassengerTabs() {
-    return (
-        <Tab.Navigator screenOptions={tabScreenOptions}>
-            <Tab.Screen
-                name="Report" component={ReportIssueScreen}
-                options={{ tabBarLabel: "Report", tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>◈</Text> }}
-            />
-            <Tab.Screen
-                name="Track" component={TrackIssueScreen}
-                options={{ tabBarLabel: "Track", tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>◎</Text> }}
-            />
-            <Tab.Screen
-                name="ChatBot" component={ChatBotScreen}
-                options={{ tabBarLabel: "AeroBot", tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>⚡</Text> }}
-            />
-            <Tab.Screen
-                name="QRScan" component={QRScanScreen}
-                options={{ tabBarLabel: "Scan", tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>▣</Text> }}
-            />
-        </Tab.Navigator>
-    );
-}
 
 function TechnicianStack() {
     return (
@@ -122,11 +94,10 @@ function AdminTabs() {
 
 function RoleNavigator() {
     const role = useSelector((state: RootState) => state.auth.role);
-    if (role === "passenger") return <PassengerTabs />;
-    if (role === "technician") return <TechnicianStack />;
-    if (role === "manager") return <ManagerTabs />;
+    const techRoles = ["technician", "security", "electrician", "plumber", "helpstaff"];
+    if (techRoles.includes(role)) return <TechnicianStack />;
     if (role === "admin") return <AdminTabs />;
-    return <PassengerTabs />;
+    return <ManagerTabs />;
 }
 
 export default function AppNavigator() {

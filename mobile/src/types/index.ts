@@ -1,4 +1,4 @@
-export type UserRole = "passenger" | "technician" | "manager" | "admin";
+export type UserRole = "passenger" | "technician" | "security" | "electrician" | "plumber" | "helpstaff" | "manager" | "admin";
 
 export type Priority = "1" | "2" | "3" | "4";
 

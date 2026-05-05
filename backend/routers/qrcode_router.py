@@ -14,7 +14,8 @@ class QRCreate(BaseModel):
 
 @router.post("/generate")
 def generate_qr(data: QRCreate):
-    url = f"smartairport://report?terminal={data.terminal}&area={data.area}&code={data.location_code}"
+    # Route passengers to the static website with query parameters
+    url = f"http://localhost:5173/?location={data.terminal}&area={data.area}&code={data.location_code}"
 
     qr = qrcode.QRCode(version=1, box_size=10, border=4)
     qr.add_data(url)

@@ -1,43 +1,43 @@
 // Smart Airport Management — Design System
 export const Colors = {
-    // Backgrounds
-    bg: "#0A0F1E",           // Deep navy black
-    bgCard: "#111827",       // Card background
-    bgElevated: "#1C2537",   // Elevated surface
-    bgInput: "#162030",      // Input background
+    // Backgrounds - Ultra Deep Canvas
+    bg: "#030712",           // Almost black blue for OLED/dark mode
+    bgCard: "#0F172A",       // Slate 900
+    bgElevated: "#1E293B",   // Slate 800
+    bgInput: "rgba(30, 41, 59, 0.7)",      
 
-    // Primary brand
-    primary: "#00B4FF",      // Electric blue
-    primaryDark: "#0077B6",
-    primaryGlow: "rgba(0,180,255,0.15)",
+    // Primary brand - Vibrant Sky
+    primary: "#0EA5E9",      // Sky blue
+    primaryDark: "#0284C7",
+    primaryGlow: "rgba(14, 165, 233, 0.15)",
 
-    // Accent
-    accent: "#7C3AED",       // Purple accent
-    accentGlow: "rgba(124,58,237,0.15)",
+    // Accent - Deep Purple
+    accent: "#8B5CF6",       // Violet
+    accentGlow: "rgba(139, 92, 246, 0.15)",
 
-    // Status colors
-    critical: "#FF3B5C",     // Red
-    criticalBg: "rgba(255,59,92,0.12)",
-    high: "#FF8C00",         // Orange
-    highBg: "rgba(255,140,0,0.12)",
-    medium: "#00B4FF",       // Blue
-    mediumBg: "rgba(0,180,255,0.12)",
-    low: "#00D283",          // Green
-    lowBg: "rgba(0,210,131,0.12)",
+    // Status colors - High Saturation
+    critical: "#F43F5E",     // Rose
+    criticalBg: "rgba(244, 63, 94, 0.15)",
+    high: "#F59E0B",         // Amber
+    highBg: "rgba(245, 158, 11, 0.15)",
+    medium: "#0EA5E9",       // Sky
+    mediumBg: "rgba(14, 165, 233, 0.15)",
+    low: "#10B981",          // Emerald
+    lowBg: "rgba(16, 185, 129, 0.15)",
 
     // Safety
-    safety: "#FF3B5C",
-    safetyBg: "rgba(255,59,92,0.1)",
+    safety: "#F43F5E",
+    safetyBg: "rgba(244, 63, 94, 0.2)",
 
-    // Text
-    textPrimary: "#F0F4FF",
-    textSecondary: "#8896A9",
-    textMuted: "#4A5568",
-    textInverse: "#0A0F1E",
+    // Text - Sharp Contrast
+    textPrimary: "#F8FAFC",
+    textSecondary: "#94A3B8",
+    textMuted: "#64748B",
+    textInverse: "#030712",
 
-    // Borders
-    border: "rgba(255,255,255,0.07)",
-    borderActive: "rgba(0,180,255,0.4)",
+    // Borders - Subtle glow
+    border: "rgba(248, 250, 252, 0.08)",
+    borderActive: "rgba(14, 165, 233, 0.4)",
 
     // White
     white: "#FFFFFF",
@@ -79,16 +79,16 @@ export const Radius = {
 export const Shadow = {
     card: {
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 6,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.4,
+        shadowRadius: 16,
+        elevation: 8,
     },
     glow: {
-        shadowColor: Colors.primary,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.4,
-        shadowRadius: 10,
-        elevation: 8,
+        shadowColor: "#0EA5E9",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.5,
+        shadowRadius: 12,
+        elevation: 10,
     },
 };
