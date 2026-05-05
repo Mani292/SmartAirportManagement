@@ -22,13 +22,14 @@ Return this exact JSON:
 {{
     "category": "Facilities/IT/Security/Housekeeping/Ground Operations/HR",
     "priority": "1",
-    "assigned_team": "team name",
+    "assigned_team": "TeamName",
     "estimated_fix_mins": 30,
     "safety_risk": false,
     "recommended_action": "first step for technician"
 }}
 
 Priority: 1=Critical(safety risk), 2=High(major impact), 3=Medium, 4=Low
+Important: "assigned_team" MUST be exactly one of: "Electrical", "Plumbing", "Security", "Facilities", "IT", "HR"
 """
     res = client.chat.completions.create(
         model=MODEL,

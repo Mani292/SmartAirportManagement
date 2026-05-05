@@ -73,13 +73,14 @@ def create_incident(data: IncidentCreate):
             "category": triage["category"],
             "location": data.location,
             "u_area": data.area,
-            "u_department": data.department,
+            "u_department": triage["assigned_team"],
             "u_ai_category": triage["category"],
             "u_reported_via": data.reported_via,
             "u_safety_risk": str(triage["safety_risk"]),
             "u_estimated_fix_mins": str(triage["estimated_fix_mins"]),
             "u_recommended_action": triage["recommended_action"],
             "assignment_group": triage["assigned_team"],
+            "assigned_to": triage["assigned_team"],
             "u_reporter_phone": data.reporter_phone,
         }
 

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import {
     View, Text, TouchableOpacity, StyleSheet,
-    SafeAreaView, Dimensions, StatusBar, TextInput, ActivityIndicator, Alert
+    SafeAreaView, Dimensions, StatusBar, TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform
 } from "react-native";
 import { useDispatch } from "react-redux";
 import { login } from "../../store";
@@ -9,21 +9,10 @@ import { UserRole } from "../../types";
 import { Colors, Fonts, Radius } from "../../theme";
 import { loginApi } from "../../services/api";
 
-const { width } = Dimensions.get("window");
-
-const roles: { value: UserRole; label: string; icon: string; desc: string; color: string }[] = [
-    { value: "technician", label: "Technician", icon: "⚡", desc: "General tasks", color: "#7C3AED" },
-    { value: "security", label: "Security", icon: "🛡", desc: "Security ops", color: "#EF4444" },
-    { value: "electrician", label: "Electrician", icon: "🔌", desc: "Electrical", color: "#EAB308" },
-    { value: "plumber", label: "Plumber", icon: "🔧", desc: "Plumbing", color: "#3B82F6" },
-    { value: "helpstaff", label: "Help Staff", icon: "💁", desc: "Assistance", color: "#EC4899" },
-    { value: "manager", label: "Manager", icon: "◎", desc: "Operations", color: "#FF8C00" },
-    { value: "admin", label: "Admin", icon: "⚙", desc: "System admin", color: "#00D283" },
-];
+const { width, height } = Dimensions.get("window");
 
 export default function LoginScreen() {
     const dispatch = useDispatch();
-    const [selected, setSelected] = useState<UserRole>("manager");
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
@@ -36,7 +25,7 @@ export default function LoginScreen() {
 
         setLoading(true);
         try {
-            const response = await loginApi({ username, password, role: selected });
+            const response = await loginApi({ username, password });
             if (response.data.success) {
                 dispatch(login({
                     role: response.data.role as UserRole,
@@ -51,265 +40,238 @@ export default function LoginScreen() {
         }
     };
 
-    const selectedRole = roles.find(r => r.value === selected)!;
-
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor={Colors.bg} />
-
-            {/* Hero Section */}
-            <View style={styles.hero}>
-                {/* Glow orb */}
-                <View style={styles.glowOrb} />
-
-                <View style={styles.logoWrap}>
-                    <View style={styles.logoIcon}>
-                        <Text style={styles.logoEmoji}>✈</Text>
+            <KeyboardAvoidingView 
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                style={styles.keyboardView}
+            >
+                {/* Hero / Logo Section */}
+                <View style={styles.hero}>
+                    <View style={styles.glowOrb1} />
+                    <View style={styles.glowOrb2} />
+                    
+                    <View style={styles.logoWrap}>
+                        <View style={styles.logoIcon}>
+                            <Text style={styles.logoEmoji}>✈</Text>
+                        </View>
+                    </View>
+                    <Text style={styles.appName}>Smart Airport</Text>
+                    <Text style={styles.appSub}>Management</Text>
+                    
+                    <View style={styles.tagRow}>
+                        <View style={styles.tagDot} />
+                        <Text style={styles.tagText}>Staff Access Portal</Text>
+                        <View style={styles.tagDot} />
                     </View>
                 </View>
-                <Text style={styles.appName}>Smart Airport</Text>
-                <Text style={styles.appSub}>Management</Text>
-                <View style={styles.tagRow}>
-                    <View style={styles.tagDot} />
-                    <Text style={styles.tagText}>AI-Powered Operations Platform</Text>
-                    <View style={styles.tagDot} />
+
+                {/* Login Form Section */}
+                <View style={styles.panel}>
+                    <Text style={styles.panelTitle}>Sign In</Text>
+                    <Text style={styles.panelDesc}>Enter your ServiceNow credentials to access your assigned tasks and dashboard.</Text>
+
+                    <View style={styles.inputWrapper}>
+                        <Text style={styles.inputLabel}>USERNAME</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="e.g. electrician, manager"
+                            placeholderTextColor={Colors.textMuted}
+                            value={username}
+                            onChangeText={setUsername}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                        />
+                    </View>
+
+                    <View style={styles.inputWrapper}>
+                        <Text style={styles.inputLabel}>PASSWORD</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="••••••••"
+                            placeholderTextColor={Colors.textMuted}
+                            value={password}
+                            onChangeText={setPassword}
+                            secureTextEntry
+                            autoCapitalize="none"
+                        />
+                    </View>
+
+                    <TouchableOpacity
+                        style={[styles.loginBtn, loading && styles.loginBtnDisabled]}
+                        onPress={handleLogin}
+                        activeOpacity={0.85}
+                        disabled={loading}
+                    >
+                        {loading ? (
+                            <ActivityIndicator color="#FFFFFF" />
+                        ) : (
+                            <Text style={styles.loginBtnText}>Secure Login →</Text>
+                        )}
+                    </TouchableOpacity>
+
+                    <Text style={styles.footerText}>Powered by AeroBot AI & ServiceNow</Text>
                 </View>
-            </View>
-
-            {/* Role Selector */}
-            <View style={styles.panel}>
-                <Text style={styles.panelLabel}>Staff Authentication</Text>
-
-                <View style={styles.grid}>
-                    {roles.map((r) => {
-                        const isSelected = selected === r.value;
-                        return (
-                            <TouchableOpacity
-                                key={r.value}
-                                style={[
-                                    styles.roleCard,
-                                    isSelected && { borderColor: r.color, backgroundColor: r.color + "18" }
-                                ]}
-                                onPress={() => setSelected(r.value)}
-                                activeOpacity={0.8}
-                            >
-                                <View style={[styles.roleIconWrap, { backgroundColor: r.color + "22", borderColor: r.color + "44" }]}>
-                                    <Text style={[styles.roleIcon, { color: r.color }]}>{r.icon}</Text>
-                                </View>
-                                <Text style={[styles.roleLabel, isSelected && { color: r.color }]}>{r.label}</Text>
-                                <Text style={styles.roleDesc}>{r.desc}</Text>
-                                {isSelected && (
-                                    <View style={[styles.selectedDot, { backgroundColor: r.color }]} />
-                                )}
-                            </TouchableOpacity>
-                        );
-                    })}
-                </View>
-
-                <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>ServiceNow Username</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Enter your username"
-                        placeholderTextColor={Colors.textMuted}
-                        value={username}
-                        onChangeText={setUsername}
-                        autoCapitalize="none"
-                    />
-                </View>
-
-                <View style={[styles.inputContainer, { marginBottom: 24 }]}>
-                    <Text style={styles.inputLabel}>ServiceNow Password</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Enter your password"
-                        placeholderTextColor={Colors.textMuted}
-                        value={password}
-                        onChangeText={setPassword}
-                        secureTextEntry
-                        autoCapitalize="none"
-                    />
-                </View>
-
-                <TouchableOpacity
-                    style={[styles.loginBtn, { backgroundColor: selectedRole.color, opacity: loading ? 0.7 : 1 }]}
-                    onPress={handleLogin}
-                    activeOpacity={0.85}
-                    disabled={loading}
-                >
-                    {loading ? (
-                        <ActivityIndicator color={Colors.bg} />
-                    ) : (
-                        <>
-                            <Text style={styles.loginBtnIcon}>{selectedRole.icon}</Text>
-                            <Text style={styles.loginBtnText}>Sign in as {selectedRole.label}</Text>
-                            <Text style={styles.loginBtnArrow}>→</Text>
-                        </>
-                    )}
-                </TouchableOpacity>
-
-                <Text style={styles.footer}>Smart Airport Management v1.0</Text>
-            </View>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: Colors.bg },
+    keyboardView: { flex: 1, justifyContent: "space-between" },
     hero: {
         flex: 1,
         alignItems: "center",
         justifyContent: "center",
-        paddingBottom: 20,
-        overflow: "hidden",
+        position: "relative",
+        paddingTop: height * 0.05,
     },
-    glowOrb: {
+    glowOrb1: {
         position: "absolute",
-        width: 300,
-        height: 300,
-        borderRadius: 150,
-        backgroundColor: "rgba(0,180,255,0.07)",
-        top: -60,
+        width: 350,
+        height: 350,
+        borderRadius: 175,
+        backgroundColor: Colors.primaryGlow,
+        top: -100,
+        left: -50,
+        transform: [{ scale: 1.2 }]
     },
-    logoWrap: {
-        marginBottom: 16,
+    glowOrb2: {
+        position: "absolute",
+        width: 250,
+        height: 250,
+        borderRadius: 125,
+        backgroundColor: "rgba(139, 92, 246, 0.12)",
+        bottom: 0,
+        right: -50,
     },
+    logoWrap: { marginBottom: 20 },
     logoIcon: {
-        width: 80,
-        height: 80,
-        borderRadius: 24,
-        backgroundColor: "rgba(0,180,255,0.15)",
+        width: 88,
+        height: 88,
+        borderRadius: 28,
+        backgroundColor: "rgba(14, 165, 233, 0.1)",
         borderWidth: 1.5,
-        borderColor: "rgba(0,180,255,0.4)",
+        borderColor: "rgba(14, 165, 233, 0.3)",
         alignItems: "center",
         justifyContent: "center",
     },
-    logoEmoji: { fontSize: 36, color: Colors.primary },
+    logoEmoji: { fontSize: 42, color: Colors.primary },
     appName: {
-        fontSize: 34,
-        fontWeight: "800",
+        fontSize: Fonts.xxl,
+        fontWeight: "900",
         color: Colors.textPrimary,
-        letterSpacing: -0.5,
+        letterSpacing: -0.8,
     },
     appSub: {
-        fontSize: 34,
-        fontWeight: "800",
+        fontSize: Fonts.xxl,
+        fontWeight: "900",
         color: Colors.primary,
-        letterSpacing: -0.5,
-        marginTop: -6,
+        letterSpacing: -0.8,
+        marginTop: -8,
     },
     tagRow: {
         flexDirection: "row",
         alignItems: "center",
         gap: 8,
-        marginTop: 12,
+        marginTop: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 6,
+        backgroundColor: Colors.bgElevated,
+        borderRadius: Radius.full,
+        borderWidth: 1,
+        borderColor: Colors.border
     },
     tagDot: {
-        width: 4,
-        height: 4,
-        borderRadius: 2,
-        backgroundColor: Colors.primary,
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: Colors.accent,
     },
     tagText: {
         fontSize: Fonts.xs,
         color: Colors.textSecondary,
-        letterSpacing: 0.5,
+        letterSpacing: 1,
         textTransform: "uppercase",
+        fontWeight: "700"
     },
     panel: {
         backgroundColor: Colors.bgCard,
-        borderTopLeftRadius: 32,
-        borderTopRightRadius: 32,
-        padding: 24,
-        paddingBottom: 40,
+        borderTopLeftRadius: Radius.xxl,
+        borderTopRightRadius: Radius.xxl,
+        padding: 32,
+        paddingBottom: Platform.OS === 'ios' ? 40 : 32,
         borderTopWidth: 1,
         borderTopColor: Colors.border,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: -10 },
+        shadowOpacity: 0.3,
+        shadowRadius: 20,
+        elevation: 15,
     },
-    panelLabel: {
+    panelTitle: {
+        fontSize: 28,
+        fontWeight: "800",
+        color: Colors.textPrimary,
+        marginBottom: 8,
+    },
+    panelDesc: {
         fontSize: Fonts.sm,
         color: Colors.textSecondary,
-        marginBottom: 16,
-        letterSpacing: 0.3,
-        textTransform: "uppercase",
+        lineHeight: 20,
+        marginBottom: 32,
     },
-    grid: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: 10,
+    inputWrapper: {
         marginBottom: 20,
     },
-    roleCard: {
-        width: (width - 48 - 10) / 2,
-        backgroundColor: Colors.bgElevated,
-        borderRadius: Radius.md,
-        padding: 16,
-        borderWidth: 1.5,
-        borderColor: Colors.border,
-        alignItems: "center",
-        position: "relative",
-    },
-    roleIconWrap: {
-        width: 48,
-        height: 48,
-        borderRadius: 14,
-        borderWidth: 1,
-        alignItems: "center",
-        justifyContent: "center",
-        marginBottom: 10,
-    },
-    roleIcon: { fontSize: 22, fontWeight: "700" },
-    roleLabel: {
-        fontSize: Fonts.md,
-        fontWeight: "700",
-        color: Colors.textPrimary,
-        marginBottom: 2,
-    },
-    roleDesc: {
-        fontSize: Fonts.xs,
-        color: Colors.textMuted,
-        textAlign: "center",
-    },
-    selectedDot: {
-        position: "absolute",
-        top: 10,
-        right: 10,
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-    },
-    loginBtn: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 18,
-        borderRadius: Radius.lg,
-        gap: 8,
-        marginBottom: 16,
-    },
-    loginBtnIcon: { fontSize: 18, color: Colors.bg },
-    loginBtnText: { fontSize: Fonts.lg, fontWeight: "800", color: Colors.bg, flex: 1, textAlign: "center" },
-    loginBtnArrow: { fontSize: 18, color: Colors.bg, fontWeight: "700" },
-    inputContainer: {
-        marginBottom: 16,
-    },
     inputLabel: {
-        fontSize: Fonts.sm,
-        color: Colors.textSecondary,
+        fontSize: 11,
+        color: Colors.primary,
         marginBottom: 8,
-        fontWeight: "600",
+        fontWeight: "700",
+        letterSpacing: 1.5,
     },
     input: {
         backgroundColor: Colors.bgElevated,
-        borderWidth: 1,
-        borderColor: Colors.border,
-        borderRadius: Radius.md,
-        padding: 14,
+        borderWidth: 1.5,
+        borderColor: Colors.borderActive,
+        borderRadius: Radius.lg,
+        padding: 16,
         fontSize: Fonts.md,
         color: Colors.textPrimary,
+        fontWeight: "600",
     },
-    footer: {
+    loginBtn: {
+        backgroundColor: Colors.primary,
+        padding: 18,
+        borderRadius: Radius.lg,
+        alignItems: "center",
+        justifyContent: "center",
+        marginTop: 12,
+        shadowColor: Colors.primary,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.4,
+        shadowRadius: 12,
+        elevation: 8,
+    },
+    loginBtnDisabled: {
+        opacity: 0.7,
+        shadowOpacity: 0,
+        elevation: 0,
+    },
+    loginBtnText: {
+        fontSize: Fonts.lg,
+        fontWeight: "800",
+        color: "#FFFFFF",
+        letterSpacing: 0.5,
+    },
+    footerText: {
         textAlign: "center",
-        fontSize: Fonts.xs,
+        fontSize: 11,
         color: Colors.textMuted,
+        marginTop: 24,
+        letterSpacing: 0.5,
     },
 });

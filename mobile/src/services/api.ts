@@ -12,7 +12,7 @@ const api = axios.create({
 });
 
 // ── AUTH ──
-export const loginApi = (data: { username: string; password: string; role: string }) =>
+export const loginApi = (data: { username: string; password: string }) =>
     api.post("/auth/login", data);
 
 // ── INCIDENTS ──

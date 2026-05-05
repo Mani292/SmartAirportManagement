@@ -139,10 +139,10 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: 20,
+        marginBottom: 24,
     },
-    greeting: { fontSize: Fonts.xl, fontWeight: "800", color: Colors.textPrimary },
-    headerSub: { fontSize: Fonts.sm, color: Colors.textSecondary, marginTop: 2 },
+    greeting: { fontSize: 26, fontWeight: "900", color: Colors.textPrimary, letterSpacing: -0.5 },
+    headerSub: { fontSize: Fonts.sm, color: Colors.primary, fontWeight: "600", marginTop: 4, letterSpacing: 0.5 },
     refreshBtn: {
         width: 40, height: 40, borderRadius: 12,
         backgroundColor: Colors.bgCard,
