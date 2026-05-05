@@ -329,9 +329,6 @@ Full interactive docs: `http://localhost:8000/docs`
 
 ---
 
-## 📝 License
-
-MIT License — see [LICENSE](LICENSE) for details.
 
 ---
 
