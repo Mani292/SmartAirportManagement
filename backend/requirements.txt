@@ -1,3 +1,17 @@
+# Required for ServiceNow integration and environment variable loading
+requests
+python-dotenv
+# Required for ServiceNow API and environment variable loading
+requests
+python-dotenv
+# Required for QR code generation
+qrcode
+# Required for LLM integration
+groq
+# Required for JWT authentication
+python-jose
+# Required for password hashing
+passlib
 fastapi>=0.111.0
 uvicorn[standard]>=0.29.0
 python-dotenv>=1.0.1
