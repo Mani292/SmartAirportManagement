@@ -90,7 +90,7 @@ def init_db() -> None:
             """)
 
         conn.commit()
-        print("[DB] SQLite initialized →", DB_PATH)
+        print("[DB] SQLite initialized ->", DB_PATH)
     finally:
         conn.close()
 

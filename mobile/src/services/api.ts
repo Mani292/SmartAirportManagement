@@ -14,6 +14,9 @@ const getBaseUrl = () => {
     if (Platform.OS === "android") {
         return "http://10.0.2.2:8000/api"; // Android emulator
     }
+    if (Platform.OS === "web") {
+        return "http://localhost:8000/api"; // Browser web build
+    }
     return "http://192.168.31.230:8000/api"; // Local WiFi IP — change to your machine's IP
 };
 
