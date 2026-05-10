@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { chatWithPassenger } from '../api';
 import { ArrowLeft, Send, Sparkles } from 'lucide-react';
@@ -52,7 +52,7 @@ export default function ChatBot() {
   return (
     <div className="mobile-container animate-fade-up" style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       <header className="page-header" style={{ borderBottom: '1px solid var(--color-border)', padding: '16px 20px', background: 'var(--color-bg-card)' }}>
-        <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', color: 'var(--color-text-primary)' }}>
+        <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', color: 'var(--color-text-primary)' }} title="Go Back" aria-label="Go Back">
           <ArrowLeft size={24} />
         </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -129,6 +129,8 @@ export default function ChatBot() {
             border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
             opacity: (!input.trim() || loading) ? 0.5 : 1, cursor: 'pointer'
           }}
+          title="Send Message"
+          aria-label="Send Message"
         >
           <Send size={20} style={{ marginLeft: -2 }} />
         </button>

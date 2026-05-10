@@ -1,4 +1,4 @@
-import React from 'react';
+// React import not needed with jsx: react-jsx transform
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import ReportIssue from './pages/ReportIssue';
 import ChatBot from './pages/ChatBot';

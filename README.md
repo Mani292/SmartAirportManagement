@@ -234,6 +234,12 @@ SERVICENOW_INSTANCE=https://your-instance.service-now.com
 SERVICENOW_USERNAME=admin
 SERVICENOW_PASSWORD=your_password
 
+# JWT Authentication
+JWT_SECRET_KEY=dev_secret_key_change_in_production
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+REFRESH_TOKEN_EXPIRE_DAYS=7
+
 # AI
 GROQ_API_KEY=gsk_...
 

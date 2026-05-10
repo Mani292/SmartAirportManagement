@@ -1,12 +1,14 @@
+from typing import Optional
+
+import llm
+import servicenow as sn
+from email_service import send_task_assignment
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional
-import servicenow as sn
-import llm
 from whatsapp import send_confirmation, send_resolution
-from email_service import send_task_assignment
 
 router = APIRouter()
+
 
 class IncidentCreate(BaseModel):
     short_description: str
@@ -17,21 +19,26 @@ class IncidentCreate(BaseModel):
     reporter_phone: Optional[str] = ""
     reporter_email: Optional[str] = ""
 
+
 class IncidentUpdate(BaseModel):
     state: Optional[str] = ""
     work_notes: Optional[str] = ""
     close_notes: Optional[str] = ""
 
+
 class RatingUpdate(BaseModel):
     rating: int
     comment: Optional[str] = ""
 
+
 def cleanup_snow_record(record):
-    if not isinstance(record, dict): return record
+    if not isinstance(record, dict):
+        return record
     for k, v in record.items():
         if isinstance(v, dict) and "value" in v:
             record[k] = v.get("display_value", v.get("value", ""))
     return record
+
 
 @router.get("/")
 def list_incidents(limit: int = 50, department: str = ""):
@@ -41,12 +48,14 @@ def list_incidents(limit: int = 50, department: str = ""):
         res["result"] = [cleanup_snow_record(r) for r in res["result"]]
     return res
 
+
 @router.get("/track/{number}")
 def track_incident(number: str):
     res = sn.get_incident_by_number(number)
     if "result" in res and isinstance(res["result"], list):
         res["result"] = [cleanup_snow_record(r) for r in res["result"]]
     return res
+
 
 @router.get("/{sys_id}")
 def get_incident(sys_id: str):
@@ -55,15 +64,13 @@ def get_incident(sys_id: str):
         res["result"] = cleanup_snow_record(res["result"])
     return res
 
+
 @router.post("/")
 def create_incident(data: IncidentCreate):
     try:
         # Step 1 — AI Triage
         triage = llm.triage_incident(
-            data.short_description,
-            data.location,
-            data.area,
-            data.department
+            data.short_description, data.location, data.area, data.department
         )
 
         # Step 2 — Build ServiceNow payload using ONLY standard incident fields
@@ -112,9 +119,7 @@ def create_incident(data: IncidentCreate):
         if data.reporter_phone:
             try:
                 whatsapp_sent = send_confirmation(
-                    data.reporter_phone,
-                    inc_number,
-                    data.short_description
+                    data.reporter_phone, inc_number, data.short_description
                 )
             except Exception as wa_err:
                 print(f"[WARN] WhatsApp send failed: {wa_err}")
@@ -128,7 +133,7 @@ def create_incident(data: IncidentCreate):
                     data.short_description,
                     f"{data.location} — {data.area}",
                     str(triage["priority"]),
-                    triage["recommended_action"]
+                    triage["recommended_action"],
                 )
             except Exception as email_err:
                 print(f"[WARN] Email send failed: {email_err}")
@@ -139,10 +144,7 @@ def create_incident(data: IncidentCreate):
             "incident_sys_id": inc_sys_id,
             "incident": result,
             "ai_triage": triage,
-            "notifications": {
-                "whatsapp_sent": whatsapp_sent,
-                "email_sent": email_sent
-            }
+            "notifications": {"whatsapp_sent": whatsapp_sent, "email_sent": email_sent},
         }
 
     except Exception as e:
@@ -169,10 +171,11 @@ def update_incident(sys_id: str, update: IncidentUpdate):
 
     return sn.update_incident(sys_id, data)
 
+
 @router.post("/{sys_id}/rate")
 def rate_incident(sys_id: str, rating: RatingUpdate):
     data = {
         "u_passenger_rating": str(rating.rating),
-        "u_rating_comment": rating.comment
+        "u_rating_comment": rating.comment,
     }
     return sn.update_incident(sys_id, data)

@@ -27,7 +27,25 @@ const api = axios.create({
     },
 });
 
-// Global response interceptor for error logging
+// ── JWT Token Injection ────────────────────────────────────────────────────
+// The store is imported lazily to avoid circular dependency issues.
+// Every outgoing request automatically receives the current access token.
+api.interceptors.request.use((config) => {
+    try {
+        // Lazy import to avoid circular deps with store
+        const { store } = require("../store");
+        const token: string = store.getState().auth.accessToken;
+        if (token) {
+            config.headers = config.headers || {};
+            config.headers["Authorization"] = `Bearer ${token}`;
+        }
+    } catch {
+        // Store not yet initialized — skip token injection
+    }
+    return config;
+});
+
+// ── Global response interceptor for error logging ──────────────────────────
 api.interceptors.response.use(
     (response) => response,
     (error) => {
@@ -43,9 +61,15 @@ api.interceptors.response.use(
 // ── AUTH ──
 export const loginApi = (data: { username: string; password: string }) =>
     api.post("/auth/login", data);
-    
+
 export const requestAccessApi = (data: { role: string; email?: string; phone?: string }) =>
     api.post("/auth/request-access", data);
+
+export const getMeApi = () =>
+    api.get("/auth/me");
+
+export const refreshTokenApi = (refreshToken: string) =>
+    api.post("/auth/refresh", { refresh_token: refreshToken });
 
 // ── INCIDENTS ──
 export const getIncidents = (limit = 50, department = "") =>

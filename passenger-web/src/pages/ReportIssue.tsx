@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { reportIncident } from '../api';
-import { Plane, MapPin, Send, MessageSquare, AlertCircle, Phone, Mail } from 'lucide-react';
+import { MapPin, Send, MessageSquare, AlertCircle, Phone, Mail } from 'lucide-react';
 
 export default function ReportIssue() {
   const [params] = useSearchParams();
@@ -156,6 +156,8 @@ export default function ReportIssue() {
                 value={problemType}
                 onChange={e => setProblemType(e.target.value)}
                 style={{ padding: '12px', width: '100%', appearance: 'none', background: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)' }}
+                title="Select Type of Problem"
+                aria-label="Select Type of Problem"
               >
                 <option value="General">General / Other</option>
                 <option value="Restroom">Restroom / Hygiene</option>

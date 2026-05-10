@@ -16,6 +16,7 @@ For production, we recommend deploying the FastAPI backend on **Render**, **Rail
 
 2. **Run Command**:
    Your hosting provider should run the following unified startup command:
+
    ```bash
    uvicorn main:app --host 0.0.0.0 --port $PORT
    ```
@@ -28,11 +29,13 @@ Since the app is built with Expo, you can compile it into a standalone APK for A
 
 1. **Update your API Base URL**:
    Before you build the app, go to `mobile/src/services/api.ts` and change `BASE_URL` to your live hosted backend URL!
+
    ```javascript
    const BASE_URL = "https://your-live-backend.onrender.com/api";
    ```
 
 2. **Build an Android APK**:
+
    ```bash
    cd mobile
    npm install -g eas-cli
@@ -47,7 +50,9 @@ Since the app is built with Expo, you can compile it into a standalone APK for A
 ## 3. WhatsApp Integration Notes
 
 If you want the WhatsApp notifications to run in production, you'll need to deploy **WAHA (WhatsApp HTTP API)** using Docker.
+
 ```bash
 docker run -p 3000:3000 maxmtzx/waha
 ```
+
 Then, update your backend's `.env` variable `WAHA_URL` to point to the server where the WAHA docker container is running. If not connected, the app simply ignores the notification send rather than crashing!

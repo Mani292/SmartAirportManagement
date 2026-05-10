@@ -47,6 +47,9 @@ export default function LoginScreen() {
                     role: response.data.role as UserRole,
                     username: response.data.username,
                     userId: response.data.userId,
+                    displayName: response.data.display_name,
+                    accessToken: response.data.access_token,
+                    refreshToken: response.data.refresh_token,
                 }));
             }
         } catch (error) {
@@ -267,8 +270,8 @@ const styles = StyleSheet.create({
     },
     panel: {
         backgroundColor: Colors.bgCard,
-        borderTopLeftRadius: Radius.xxl,
-        borderTopRightRadius: Radius.xxl,
+        borderTopLeftRadius: Radius.xl,
+        borderTopRightRadius: Radius.xl,
         padding: 32,
         paddingBottom: Platform.OS === 'ios' ? 40 : 32,
         borderTopWidth: 1,

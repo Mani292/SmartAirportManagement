@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { trackIncident } from '../api';
-import { Plane, Search, ArrowLeft, Clock, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
+import { Search, ArrowLeft, Clock, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
 
 const stateMap: Record<string, { label: string; color: string; icon: any }> = {
   "1": { label: "New", color: "#F59E0B", icon: AlertCircle },

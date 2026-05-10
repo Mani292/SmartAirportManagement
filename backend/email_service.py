@@ -1,13 +1,15 @@
 import os
 import smtplib
-from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
 from dotenv import load_dotenv
 
 load_dotenv()
 
 SENDER = os.getenv("EMAIL_SENDER")
 PASSWORD = os.getenv("EMAIL_PASSWORD")
+
 
 def send_email(to, subject, html_body):
     try:
@@ -26,12 +28,13 @@ def send_email(to, subject, html_body):
         print(f"Email error: {e}")
         return False
 
+
 def send_task_assignment(to, inc_number, description, location, priority, action):
     priority_labels = {
         "1": "🔴 P1 Critical",
         "2": "🟠 P2 High",
         "3": "🟡 P3 Medium",
-        "4": "🟢 P4 Low"
+        "4": "🟢 P4 Low",
     }
     p_label = priority_labels.get(str(priority), f"P{priority}")
     return send_email(
@@ -55,8 +58,9 @@ def send_task_assignment(to, inc_number, description, location, priority, action
       Please open the Smart Airport Management app to update this task.
     </p>
   </div>
-</div>"""
+</div>""",
     )
+
 
 def send_sla_breach(to, inc_number, priority, elapsed_mins):
     return send_email(
@@ -77,8 +81,9 @@ def send_sla_breach(to, inc_number, priority, elapsed_mins):
       Immediate escalation and action required!
     </div>
   </div>
-</div>"""
+</div>""",
     )
+
 
 def send_daily_summary(to, total, resolved, overdue):
     return send_email(
@@ -106,8 +111,9 @@ def send_daily_summary(to, total, resolved, overdue):
       </div>
     </div>
   </div>
-</div>"""
+</div>""",
     )
+
 
 def send_credentials(to, role, username, password):
     return send_email(
@@ -130,5 +136,5 @@ def send_credentials(to, role, username, password):
       Please keep these credentials secure. Log in via the Smart Airport mobile application to access your dashboard.
     </p>
   </div>
-</div>"""
-    )
+</div>""",
+    )

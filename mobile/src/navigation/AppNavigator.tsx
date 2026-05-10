@@ -13,6 +13,7 @@ import LoginScreen from "../screens/auth/LoginScreen";
 // Technician
 import MyTasksScreen from "../screens/technician/MyTasksScreen";
 import TaskDetailScreen from "../screens/technician/TaskDetailScreen";
+import QRScannerScreen from "../screens/technician/QRScannerScreen";
 
 // Manager
 import DashboardScreen from "../screens/manager/DashboardScreen";
@@ -50,7 +51,25 @@ function TechnicianStack() {
         <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen name="MyTasks" component={MyTasksScreen} />
             <Stack.Screen name="TaskDetail" component={TaskDetailScreen} />
+            <Stack.Screen name="QRScanner" component={QRScannerScreen} />
         </Stack.Navigator>
+    );
+}
+
+function TechnicianTabs() {
+    return (
+        <Tab.Navigator screenOptions={tabScreenOptions}>
+            <Tab.Screen
+                name="TasksStack"
+                component={TechnicianStack}
+                options={{ tabBarLabel: "My Tasks", tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>📋</Text> }}
+            />
+            <Tab.Screen
+                name="ScanQR"
+                component={QRScannerScreen}
+                options={{ tabBarLabel: "Scan QR", tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>📷</Text> }}
+            />
+        </Tab.Navigator>
     );
 }
 
@@ -95,7 +114,7 @@ function AdminTabs() {
 function RoleNavigator() {
     const role = useSelector((state: RootState) => state.auth.role);
     const techRoles = ["technician", "security", "electrician", "plumber", "helpstaff"];
-    if (techRoles.includes(role)) return <TechnicianStack />;
+    if (techRoles.includes(role)) return <TechnicianTabs />;
     if (role === "admin") return <AdminTabs />;
     return <ManagerTabs />;
 }

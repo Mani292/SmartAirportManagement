@@ -1,12 +1,14 @@
-import os
 import json
-from groq import Groq
+import os
+
 from dotenv import load_dotenv
+from groq import Groq
 
 load_dotenv()
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 MODEL = "llama-3.1-8b-instant"
+
 
 def triage_incident(description, location, area, department):
     prompt = f"""
@@ -32,13 +34,12 @@ Priority: 1=Critical(safety risk), 2=High(major impact), 3=Medium, 4=Low
 Important: "assigned_team" MUST be exactly one of: "Electrical", "Plumbing", "Security", "Facilities", "IT", "HR"
 """
     res = client.chat.completions.create(
-        model=MODEL,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.1
+        model=MODEL, messages=[{"role": "user", "content": prompt}], temperature=0.1
     )
     content = res.choices[0].message.content.strip()
     content = content.replace("```json", "").replace("```", "").strip()
     return json.loads(content)
+
 
 def chat_with_passenger(message, conversation_history):
     system = """You are a friendly airport assistant helping passengers report facility issues.
@@ -53,11 +54,10 @@ Do not ask more than one question at a time."""
     messages.append({"role": "user", "content": message})
 
     res = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        messages=messages,
-        temperature=0.7
+        model="llama-3.1-8b-instant", messages=messages, temperature=0.7
     )
     return res.choices[0].message.content
+
 
 def get_kb_answer(question, asset, issue):
     prompt = f"""
@@ -71,11 +71,10 @@ Mark any safety warnings with [SAFETY].
 Be practical and concise. Maximum 10 steps.
 """
     res = client.chat.completions.create(
-        model=MODEL,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.3
+        model=MODEL, messages=[{"role": "user", "content": prompt}], temperature=0.3
     )
     return res.choices[0].message.content
+
 
 def generate_resolution_summary(description, notes):
     prompt = f"""
@@ -85,8 +84,6 @@ Resolution Notes: {notes}
 Keep it under 3 sentences. Professional tone. No fluff.
 """
     res = client.chat.completions.create(
-        model=MODEL,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.2
+        model=MODEL, messages=[{"role": "user", "content": prompt}], temperature=0.2
     )
     return res.choices[0].message.content
