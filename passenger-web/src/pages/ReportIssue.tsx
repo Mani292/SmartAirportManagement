@@ -154,7 +154,7 @@ export default function ReportIssue() {
               <select
                 className="glass-input"
                 value={problemType}
-                onChange={e => setProblemType(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setProblemType(e.target.value)}
                 style={{ padding: '12px', width: '100%', appearance: 'none', background: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)' }}
                 title="Select Type of Problem"
                 aria-label="Select Type of Problem"
@@ -173,7 +173,7 @@ export default function ReportIssue() {
                 className="glass-input" 
                 rows={3} 
                 placeholder="What exactly is broken or needs attention?"
-                value={desc} onChange={e => setDesc(e.target.value)}
+                value={desc} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDesc(e.target.value)}
                 required
               />
             </div>
@@ -186,7 +186,7 @@ export default function ReportIssue() {
                   <input 
                     type="text" className="glass-input" style={{ paddingLeft: 36 }}
                     placeholder="Terminal 1"
-                    value={location} onChange={e => setLocation(e.target.value)}
+                    value={location} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocation(e.target.value)}
                     required
                   />
                 </div>
@@ -196,7 +196,7 @@ export default function ReportIssue() {
                 <input 
                   type="text" className="glass-input"
                   placeholder="Gate 4"
-                  value={area} onChange={e => setArea(e.target.value)}
+                  value={area} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setArea(e.target.value)}
                   required
                 />
               </div>
@@ -211,7 +211,7 @@ export default function ReportIssue() {
                 <input 
                   type="tel" className="glass-input" style={{ paddingLeft: 36 }}
                   placeholder="+1234567890"
-                  value={phone} onChange={e => setPhone(e.target.value)}
+                  value={phone} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPhone(e.target.value)}
                 />
               </div>
             </div>
@@ -223,7 +223,7 @@ export default function ReportIssue() {
                  <input 
                    type="email" className="glass-input" style={{ paddingLeft: 36 }}
                    placeholder="you@example.com"
-                   value={email} onChange={e => setEmail(e.target.value)}
+                   value={email} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                  />
               </div>
             </div>

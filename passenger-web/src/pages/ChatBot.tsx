@@ -119,8 +119,8 @@ export default function ChatBot() {
         <input 
           type="text" className="glass-input" style={{ flex: 1 }}
           placeholder="Describe the issue..."
-          value={input} onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && send()}
+          value={input} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInput(e.target.value)}
+          onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && send()}
         />
         <button 
           onClick={() => send()} disabled={!input.trim() || loading}
