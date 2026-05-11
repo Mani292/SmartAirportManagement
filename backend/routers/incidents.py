@@ -4,6 +4,7 @@ import llm
 import servicenow as sn
 from email_service import send_task_assignment
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi.concurrency import run_in_threadpool
 from routers.auth import get_current_user
 from security.rbac import RoleChecker
 from pydantic import BaseModel
@@ -43,35 +44,35 @@ def cleanup_snow_record(record):
 
 
 @router.get("/")
-def list_incidents(limit: int = 50, department: str = "", user: dict = Depends(get_current_user)):
+async def list_incidents(limit: int = 50, department: str = "", user: dict = Depends(get_current_user)):
     query = f"u_department={department}" if department else ""
-    res = sn.get_incidents(limit=limit, query=query)
+    res = await run_in_threadpool(sn.get_incidents, limit=limit, query=query)
     if "result" in res and isinstance(res["result"], list):
         res["result"] = [cleanup_snow_record(r) for r in res["result"]]
     return res
 
 
 @router.get("/track/{number}")
-def track_incident(number: str):
-    res = sn.get_incident_by_number(number)
+async def track_incident(number: str):
+    res = await run_in_threadpool(sn.get_incident_by_number, number)
     if "result" in res and isinstance(res["result"], list):
         res["result"] = [cleanup_snow_record(r) for r in res["result"]]
     return res
 
 
 @router.get("/{sys_id}")
-def get_incident(sys_id: str, user: dict = Depends(get_current_user)):
-    res = sn.get_incident(sys_id)
+async def get_incident(sys_id: str, user: dict = Depends(get_current_user)):
+    res = await run_in_threadpool(sn.get_incident, sys_id)
     if "result" in res and isinstance(res["result"], dict):
         res["result"] = cleanup_snow_record(res["result"])
     return res
 
 
 @router.post("/")
-def create_incident(data: IncidentCreate):
+async def create_incident(data: IncidentCreate):
     try:
-        # Step 1 — AI Triage
-        triage = llm.triage_incident(
+        # Step 1 — AI Triage (Async)
+        triage = await llm.triage_incident(
             data.short_description, data.location, data.area, data.department
         )
 
@@ -103,8 +104,8 @@ def create_incident(data: IncidentCreate):
             "urgency": "2",
         }
 
-        # Step 3 — Create in ServiceNow
-        result = sn.create_incident(payload)
+        # Step 3 — Create in ServiceNow (Blocking call moved to threadpool)
+        result = await run_in_threadpool(sn.create_incident, payload)
 
         # Handle failure
         if result.get("status") == "failure" or "error" in result:
@@ -117,19 +118,20 @@ def create_incident(data: IncidentCreate):
         whatsapp_sent = False
         email_sent = False
 
-        # Step 4 — WhatsApp confirmation to passenger
+        # Step 4 — WhatsApp confirmation to passenger (Blocking call moved to threadpool)
         if data.reporter_phone:
             try:
-                whatsapp_sent = send_confirmation(
-                    data.reporter_phone, inc_number, data.short_description
+                whatsapp_sent = await run_in_threadpool(
+                    send_confirmation, data.reporter_phone, inc_number, data.short_description
                 )
             except Exception as wa_err:
                 print(f"[WARN] WhatsApp send failed: {wa_err}")
 
-        # Step 5 — Email task assignment notification
+        # Step 5 — Email task assignment notification (Blocking call moved to threadpool)
         if data.reporter_email:
             try:
-                email_sent = send_task_assignment(
+                email_sent = await run_in_threadpool(
+                    send_task_assignment,
                     data.reporter_email,
                     inc_number,
                     data.short_description,
@@ -154,30 +156,30 @@ def create_incident(data: IncidentCreate):
 
 
 @router.patch("/{sys_id}")
-def update_incident(sys_id: str, update: IncidentUpdate, user: dict = Depends(get_current_user)):
+async def update_incident(sys_id: str, update: IncidentUpdate, user: dict = Depends(get_current_user)):
     data = {k: v for k, v in update.dict().items() if v}
 
     # If resolved — send WhatsApp + email to passenger
     if update.state == "6":
         try:
-            incident = sn.get_incident(sys_id)
+            incident = await run_in_threadpool(sn.get_incident, sys_id)
             phone = incident.get("result", {}).get("u_reporter_phone", "")
             number = incident.get("result", {}).get("number", "")
             if phone:
                 try:
-                    send_resolution(phone, number)
+                    await run_in_threadpool(send_resolution, phone, number)
                 except Exception as wa_err:
                     print(f"[WARN] WhatsApp resolution send failed: {wa_err}")
         except Exception as lookup_err:
             print(f"[WARN] Could not fetch incident for notification: {lookup_err}")
 
-    return sn.update_incident(sys_id, data)
+    return await run_in_threadpool(sn.update_incident, sys_id, data)
 
 
 @router.post("/{sys_id}/rate")
-def rate_incident(sys_id: str, rating: RatingUpdate):
+async def rate_incident(sys_id: str, rating: RatingUpdate):
     data = {
         "u_passenger_rating": str(rating.rating),
         "u_rating_comment": rating.comment,
     }
-    return sn.update_incident(sys_id, data)
+    return await run_in_threadpool(sn.update_incident, sys_id, data)

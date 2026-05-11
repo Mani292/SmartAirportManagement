@@ -29,19 +29,19 @@ class SummaryRequest(BaseModel):
 
 
 @router.post("/chat")
-def passenger_chat(req: ChatRequest):
+async def passenger_chat(req: ChatRequest):
     history = [{"role": m.role, "content": m.content} for m in req.history]
-    response = llm.chat_with_passenger(req.message, history)
+    response = await llm.chat_with_passenger(req.message, history)
     return {"response": response}
 
 
 @router.post("/kb")
-def kb_query(req: KBRequest):
-    answer = llm.get_kb_answer(req.question, req.asset, req.issue)
+async def kb_query(req: KBRequest):
+    answer = await llm.get_kb_answer(req.question, req.asset, req.issue)
     return {"answer": answer}
 
 
 @router.post("/summarize")
-def summarize(req: SummaryRequest):
-    summary = llm.generate_resolution_summary(req.description, req.notes)
+async def summarize(req: SummaryRequest):
+    summary = await llm.generate_resolution_summary(req.description, req.notes)
     return {"summary": summary}
