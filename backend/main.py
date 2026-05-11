@@ -2,9 +2,9 @@ from contextlib import asynccontextmanager
 
 import database
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from routers import (ai, assets, auth, incidents, notifications, preventive,
+from routers import (ai, assets, auth, incidents, iot, notifications, preventive,
                      qrcode_router, technician)
 
 load_dotenv()
@@ -26,7 +26,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000", "https://aerobot.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -40,6 +40,7 @@ app.include_router(technician.router, prefix="/api/technician", tags=["Technicia
 app.include_router(ai.router, prefix="/api/ai", tags=["AI"])
 app.include_router(notifications.router, prefix="/api/notify", tags=["Notifications"])
 app.include_router(qrcode_router.router, prefix="/api/qr", tags=["QR Code"])
+app.include_router(iot.router, prefix="/api/iot", tags=["IoT"])
 
 
 @app.get("/")
@@ -57,3 +58,11 @@ def root():
 def health():
     """Health check endpoint for load balancers and uptime monitors."""
     return {"status": "healthy", "service": "smart-airport-api", "version": "2.0.0"}
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(ws: WebSocket):
+    await ws.accept()
+    while True:
+        data = await ws.receive_text()
+        await ws.send_text("Live update received")

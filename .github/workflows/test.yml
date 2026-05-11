@@ -1,0 +1,25 @@
+name: Tests
+
+on: [push]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r backend/requirements.txt pytest httpx passlib bcrypt
+
+      - name: Run Tests
+        env:
+          JWT_SECRET_KEY: testsecret
+          GROQ_API_KEY: test
+          PYTHONPATH: .
+        run: cd backend && pytest tests/

@@ -32,7 +32,7 @@ REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
 
 # ── Password hashing ──────────────────────────────────────────────────────────
 pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
-bearer = HTTPBearer(auto_error=False)
+bearer = HTTPBearer(auto_error=True)
 
 # ── Mock user store (hashed passwords — never plaintext) ─────────────────────
 # In production these would live in a proper users table with per-user salts.

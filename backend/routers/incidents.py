@@ -3,9 +3,11 @@ from typing import Optional
 import llm
 import servicenow as sn
 from email_service import send_task_assignment
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from whatsapp import send_confirmation, send_resolution
+from routers.auth import get_current_user
+from security.rbac import require_role
 
 router = APIRouter()
 
@@ -41,7 +43,7 @@ def cleanup_snow_record(record):
 
 
 @router.get("/")
-def list_incidents(limit: int = 50, department: str = ""):
+def list_incidents(limit: int = 50, department: str = "", user=Depends(get_current_user)):
     query = f"u_department={department}" if department else ""
     res = sn.get_incidents(limit=limit, query=query)
     if "result" in res and isinstance(res["result"], list):
@@ -50,7 +52,7 @@ def list_incidents(limit: int = 50, department: str = ""):
 
 
 @router.get("/track/{number}")
-def track_incident(number: str):
+def track_incident(number: str, user=Depends(get_current_user)):
     res = sn.get_incident_by_number(number)
     if "result" in res and isinstance(res["result"], list):
         res["result"] = [cleanup_snow_record(r) for r in res["result"]]
@@ -58,7 +60,7 @@ def track_incident(number: str):
 
 
 @router.get("/{sys_id}")
-def get_incident(sys_id: str):
+def get_incident(sys_id: str, user=Depends(get_current_user)):
     res = sn.get_incident(sys_id)
     if "result" in res and isinstance(res["result"], dict):
         res["result"] = cleanup_snow_record(res["result"])
@@ -66,7 +68,7 @@ def get_incident(sys_id: str):
 
 
 @router.post("/")
-def create_incident(data: IncidentCreate):
+def create_incident(data: IncidentCreate, user=Depends(get_current_user)):
     try:
         # Step 1 — AI Triage
         triage = llm.triage_incident(
@@ -152,7 +154,8 @@ def create_incident(data: IncidentCreate):
 
 
 @router.patch("/{sys_id}")
-def update_incident(sys_id: str, update: IncidentUpdate):
+def update_incident(sys_id: str, update: IncidentUpdate, user=Depends(get_current_user)):
+    require_role(user, ["admin", "manager", "technician", "electrician", "plumber", "security", "helpstaff"])
     data = {k: v for k, v in update.dict().items() if v}
 
     # If resolved — send WhatsApp + email to passenger
@@ -173,7 +176,7 @@ def update_incident(sys_id: str, update: IncidentUpdate):
 
 
 @router.post("/{sys_id}/rate")
-def rate_incident(sys_id: str, rating: RatingUpdate):
+def rate_incident(sys_id: str, rating: RatingUpdate, user=Depends(get_current_user)):
     data = {
         "u_passenger_rating": str(rating.rating),
         "u_rating_comment": rating.comment,
