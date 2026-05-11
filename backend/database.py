@@ -130,6 +130,18 @@ def init_db() -> None:
 # Asset helpers
 # ══════════════════════════════════════════════════════════════════════════════
 
+ALLOWED_ASSET_FIELDS = {
+    "u_airport_id",
+    "u_name",
+    "u_type",
+    "u_location",
+    "u_terminal",
+    "u_status",
+    "u_last_serviced",
+    "u_criticality",
+    "notes",
+}
+
 
 def db_get_assets() -> list[dict]:
     conn = get_connection()
@@ -186,6 +198,12 @@ def db_create_asset(payload: dict) -> dict:
 def db_update_asset(sys_id: str, updates: dict) -> dict | None:
     if not updates:
         return db_get_asset(sys_id)
+
+    # Security: Whitelist validation for column names to prevent SQL injection
+    for k in updates:
+        if k not in ALLOWED_ASSET_FIELDS:
+            raise ValueError(f"Invalid field: {k}")
+
     conn = get_connection()
     try:
         fields = ", ".join(f"{k} = ?" for k in updates)
@@ -200,6 +218,18 @@ def db_update_asset(sys_id: str, updates: dict) -> dict | None:
 # ══════════════════════════════════════════════════════════════════════════════
 # Preventive task helpers
 # ══════════════════════════════════════════════════════════════════════════════
+
+ALLOWED_TASK_FIELDS = {
+    "u_title",
+    "u_asset_name",
+    "u_assigned_team",
+    "u_due_date",
+    "u_frequency",
+    "u_description",
+    "u_status",
+    "notes",
+    "completed_date",
+}
 
 
 def db_get_tasks() -> list[dict]:
@@ -258,6 +288,12 @@ def db_create_task(payload: dict) -> dict:
 def db_update_task(sys_id: str, updates: dict) -> dict | None:
     if not updates:
         return db_get_task(sys_id)
+
+    # Security: Whitelist validation for column names to prevent SQL injection
+    for k in updates:
+        if k not in ALLOWED_TASK_FIELDS:
+            raise ValueError(f"Invalid field: {k}")
+
     conn = get_connection()
     try:
         fields = ", ".join(f"{k} = ?" for k in updates)
