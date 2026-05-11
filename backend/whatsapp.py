@@ -1,15 +1,48 @@
 import os
-
 import requests
 
 WAHA_URL = os.getenv("WAHA_URL", "http://localhost:3000")
 WAHA_API_KEY = os.getenv("WAHA_API_KEY", "")
 
 
+def ensure_session_started(session="default"):
+    """
+    Checks if the WAHA session is started. If not, attempts to start it.
+    Returns True if session is running or starting, False if failed.
+    """
+    try:
+        headers = {}
+        if WAHA_API_KEY:
+            headers["X-Api-Key"] = WAHA_API_KEY
+
+        # 1. Check status
+        status_res = requests.get(f"{WAHA_URL}/api/sessions/{session}", headers=headers, timeout=5)
+        if status_res.status_code == 200:
+            status = status_res.json().get("status")
+            if status in ["STARTING", "SCANNING_QR", "WORKING"]:
+                return True
+
+        # 2. Start session if not running
+        start_res = requests.post(
+            f"{WAHA_URL}/api/sessions/start",
+            headers=headers,
+            json={"name": session},
+            timeout=5
+        )
+        # 422 means already started, which is fine
+        return start_res.status_code in [200, 201, 422]
+    except Exception as e:
+        print(f"[WAHA] Session init error: {e}")
+        return False
+
+
 def send_whatsapp(phone, message):
     try:
         # Clean phone number — remove spaces, dashes, +
         phone = phone.replace(" ", "").replace("-", "").replace("+", "")
+
+        # Ensure session is active before sending
+        ensure_session_started()
 
         headers = {"Content-Type": "application/json"}
         if WAHA_API_KEY:
@@ -19,6 +52,7 @@ def send_whatsapp(phone, message):
             f"{WAHA_URL}/api/sendText",
             headers=headers,
             json={"chatId": f"{phone}@c.us", "text": message, "session": "default"},
+            timeout=10
         )
         return res.status_code == 200
     except Exception as e:

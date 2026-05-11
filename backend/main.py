@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import (ai, assets, auth, incidents, notifications, preventive,
-                     qrcode_router, technician)
+                     qrcode_router, technician, iot)
 
 load_dotenv()
 
@@ -26,7 +26,13 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:8081", # Metro bundler
+        "http://localhost:19006", # Expo web
+        "https://smart-airport.vercel.app", # Placeholder prod URL
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -40,6 +46,7 @@ app.include_router(technician.router, prefix="/api/technician", tags=["Technicia
 app.include_router(ai.router, prefix="/api/ai", tags=["AI"])
 app.include_router(notifications.router, prefix="/api/notify", tags=["Notifications"])
 app.include_router(qrcode_router.router, prefix="/api/qr", tags=["QR Code"])
+app.include_router(iot.router, prefix="/api/iot", tags=["IoT"])
 
 
 @app.get("/")

@@ -23,7 +23,21 @@ const STATUS_CONFIG = {
     retired: { color: "#8896A9", bg: "rgba(136,150,169,0.12)", label: "Retired" },
 };
 
-const TYPES = ["Elevator", "Escalator", "HVAC", "Generator", "Fire System", "CCTV", "Gate", "Conveyor", "Other"];
+const TYPES = [
+    "Baggage Conveyor",
+    "Runway Lighting",
+    "Jet Bridge",
+    "Fuel Pump",
+    "Security Scanner",
+    "HVAC",
+    "Elevator",
+    "Escalator",
+    "Generator",
+    "Fire System",
+    "CCTV",
+    "Gate",
+    "Other"
+];
 const TERMINALS = ["Terminal 1", "Terminal 2", "Terminal 3", "Terminal 4"];
 
 export default function AssetManagementScreen() {

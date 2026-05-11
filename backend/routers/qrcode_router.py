@@ -1,9 +1,11 @@
 import io
-
+import os
 import database as db
 import qrcode
 import servicenow as sn
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from routers.auth import get_current_user
+from security.rbac import RoleChecker
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
@@ -17,10 +19,11 @@ class QRCreate(BaseModel):
 
 
 @router.post("/generate")
-def generate_qr(data: QRCreate):
+def generate_qr(data: QRCreate, user: dict = Depends(RoleChecker(["admin", "manager"]))):
     """Generate a QR code PNG that routes passengers to the passenger portal."""
+    base_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
     url = (
-        f"http://localhost:5173/"
+        f"{base_url}/"
         f"?location={data.terminal}&area={data.area}&code={data.location_code}"
     )
     qr = qrcode.QRCode(version=1, box_size=10, border=4)
@@ -35,7 +38,7 @@ def generate_qr(data: QRCreate):
 
 
 @router.get("/locations")
-def get_locations():
+def get_locations(user: dict = Depends(get_current_user)):
     res = sn.get_qr_locations()
     if "error" in res:
         return {"result": db.db_get_qr_locations(), "source": "fallback_db"}
@@ -43,7 +46,7 @@ def get_locations():
 
 
 @router.post("/locations")
-def create_location(data: QRCreate):
+def create_location(data: QRCreate, user: dict = Depends(RoleChecker(["admin", "manager"]))):
     payload = {
         "u_terminal": data.terminal,
         "u_area": data.area,

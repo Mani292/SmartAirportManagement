@@ -3,7 +3,9 @@ from typing import Optional
 import llm
 import servicenow as sn
 from email_service import send_task_assignment
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from routers.auth import get_current_user
+from security.rbac import RoleChecker
 from pydantic import BaseModel
 from whatsapp import send_confirmation, send_resolution
 
@@ -41,7 +43,7 @@ def cleanup_snow_record(record):
 
 
 @router.get("/")
-def list_incidents(limit: int = 50, department: str = ""):
+def list_incidents(limit: int = 50, department: str = "", user: dict = Depends(get_current_user)):
     query = f"u_department={department}" if department else ""
     res = sn.get_incidents(limit=limit, query=query)
     if "result" in res and isinstance(res["result"], list):
@@ -58,7 +60,7 @@ def track_incident(number: str):
 
 
 @router.get("/{sys_id}")
-def get_incident(sys_id: str):
+def get_incident(sys_id: str, user: dict = Depends(get_current_user)):
     res = sn.get_incident(sys_id)
     if "result" in res and isinstance(res["result"], dict):
         res["result"] = cleanup_snow_record(res["result"])
@@ -152,7 +154,7 @@ def create_incident(data: IncidentCreate):
 
 
 @router.patch("/{sys_id}")
-def update_incident(sys_id: str, update: IncidentUpdate):
+def update_incident(sys_id: str, update: IncidentUpdate, user: dict = Depends(get_current_user)):
     data = {k: v for k, v in update.dict().items() if v}
 
     # If resolved — send WhatsApp + email to passenger

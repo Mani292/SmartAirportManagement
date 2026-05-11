@@ -10,15 +10,27 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 MODEL = "llama-3.1-8b-instant"
 
 
+def sanitize_input(text: str) -> str:
+    """Sanitize user input to prevent prompt injection."""
+    if not isinstance(text, str):
+        return ""
+    # Block common injection keywords
+    blocked = ["system:", "ignore previous", "you are now", "instead of", "forget all"]
+    sanitized = text
+    for b in blocked:
+        sanitized = sanitized.replace(b, "[REDACTED]")
+    return sanitized.strip()
+
+
 def triage_incident(description, location, area, department):
     prompt = f"""
 You are an airport operations AI triage assistant.
 Analyze this incident and return ONLY valid JSON, nothing else. No explanation.
 
-Incident: {description}
-Location: {location}
-Area: {area}
-Department: {department}
+Incident: {sanitize_input(description)}
+Location: {sanitize_input(location)}
+Area: {sanitize_input(area)}
+Department: {sanitize_input(department)}
 
 Return this exact JSON:
 {{
@@ -51,7 +63,7 @@ Do not ask more than one question at a time."""
 
     messages = [{"role": "system", "content": system}]
     messages.extend(conversation_history)
-    messages.append({"role": "user", "content": message})
+    messages.append({"role": "user", "content": sanitize_input(message)})
 
     res = client.chat.completions.create(
         model="llama-3.1-8b-instant", messages=messages, temperature=0.7
@@ -62,9 +74,9 @@ Do not ask more than one question at a time."""
 def get_kb_answer(question, asset, issue):
     prompt = f"""
 You are a senior airport facility maintenance expert.
-Asset: {asset}
-Current Issue: {issue}
-Technician Question: {question}
+Asset: {sanitize_input(asset)}
+Current Issue: {sanitize_input(issue)}
+Technician Question: {sanitize_input(question)}
 
 Give numbered step-by-step repair guidance.
 Mark any safety warnings with [SAFETY].
@@ -79,8 +91,8 @@ Be practical and concise. Maximum 10 steps.
 def generate_resolution_summary(description, notes):
     prompt = f"""
 Write a short professional resolution summary for this airport maintenance incident.
-Original Issue: {description}
-Resolution Notes: {notes}
+Original Issue: {sanitize_input(description)}
+Resolution Notes: {sanitize_input(notes)}
 Keep it under 3 sentences. Professional tone. No fluff.
 """
     res = client.chat.completions.create(

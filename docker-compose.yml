@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - JWT_SECRET_KEY=production-secret-123
+      - FRONTEND_URL=http://localhost:5173
+      - GROQ_API_KEY=${GROQ_API_KEY}
+    volumes:
+      - ./backend/airport.db:/app/airport.db
+    restart: always
+
+  passenger-web:
+    build:
+      context: ./passenger-web
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    restart: always
+
+  waha:
+    image: devlikeapro/waha
+    ports:
+      - "3000:3000"
+    restart: always
+
+networks:
+  default:
+    name: smart-airport-network

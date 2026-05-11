@@ -8,11 +8,23 @@
 import React, { useState, useEffect } from "react";
 import {
     View, Text, StyleSheet, SafeAreaView, StatusBar,
-    TouchableOpacity, Alert, Vibration, ScrollView
+    TouchableOpacity, Alert, Vibration, ScrollView,
+    TextInput, TextInputProps
 } from "react-native";
 import { BarCodeScanner, BarCodeScannerResult } from "expo-barcode-scanner";
 import { Colors, Fonts, Radius } from "../../theme";
 import { createIncident } from "../../services/api";
+
+function TextInputField(props: TextInputProps) {
+    return (
+        <TextInput
+            {...props}
+            style={styles.input}
+            placeholderTextColor={Colors.textMuted}
+            autoCapitalize="none"
+        />
+    );
+}
 
 type ScanState = "requesting" | "scanning" | "scanned" | "submitting" | "done" | "denied";
 
@@ -215,24 +227,6 @@ export default function QRScannerScreen() {
                     ))}
                 </View>
 
-                {/* Description */}
-                <Text style={styles.sectionLabel}>DESCRIBE THE ISSUE *</Text>
-                <View style={styles.textInputBox}>
-                    <Text
-                        style={[styles.textAreaPlaceholder, description ? { color: Colors.textPrimary } : {}]}
-                        onPress={() => {/* handled below */}}
-                    />
-                    <View
-                        style={styles.textAreaWrapper}
-                    >
-                        {/* Use a TextInput replacement via view trick */}
-                        <View style={{ minHeight: 80 }}>
-                            <Text style={styles.textAreaNote}>
-                                Tap below and type your description
-                            </Text>
-                        </View>
-                    </View>
-                </View>
                 {/* Actual TextInput */}
                 <View style={styles.inputBox}>
                     <Text style={styles.inputLabel}>DESCRIPTION *</Text>
@@ -274,18 +268,6 @@ export default function QRScannerScreen() {
     );
 }
 
-// ── Inline TextInput wrapper (avoids import conflict) ─────────────────────────
-import { TextInput, TextInputProps } from "react-native";
-function TextInputField(props: TextInputProps) {
-    return (
-        <TextInput
-            {...props}
-            style={styles.input}
-            placeholderTextColor={Colors.textMuted}
-            autoCapitalize="none"
-        />
-    );
-}
 
 const FRAME_SIZE = 220;
 const CORNER = 24;
@@ -347,10 +329,6 @@ const styles = StyleSheet.create({
     problemIcon: { fontSize: 16 },
     problemText: { fontSize: Fonts.xs, fontWeight: "700", color: Colors.textSecondary },
 
-    textInputBox: { display: "none" },
-    textAreaWrapper: {},
-    textAreaPlaceholder: {},
-    textAreaNote: {},
 
     inputBox: { marginBottom: 16 },
     inputLabel: { fontSize: 10, fontWeight: "800", color: Colors.textMuted, letterSpacing: 1, marginBottom: 6 },

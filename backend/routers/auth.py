@@ -34,85 +34,79 @@ REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
 pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer = HTTPBearer(auto_error=False)
 
-# ── Mock user store (hashed passwords — never plaintext) ─────────────────────
-# In production these would live in a proper users table with per-user salts.
 # Hashes below are bcrypt of the role name (e.g. "admin", "tech", etc.)
 _RAW_USERS = [
     {
         "username": "admin",
-        "password": "admin",
+        "hashed_password": "$2b$12$nyOROEON2.N2Uw2jL9ArQ.6ZnVPnYryg1m9IufPP1Q3p8qjBZeHpC",
         "display": "Admin User",
         "role": "admin",
         "userId": "admin",
     },
     {
         "username": "tech",
-        "password": "tech",
+        "hashed_password": "$2b$12$ek4fHbl/kk3PxKvswvHxd.vZrnSG.pu1lcuc7tEk7UABztLg.1QJe",
         "display": "Facilities Tech",
         "role": "technician",
         "userId": "Facilities",
     },
     {
         "username": "security",
-        "password": "security",
+        "hashed_password": "$2b$12$UgQhNU32YUrDpiOecQBveOEFbhwQvF1mKEDUBE2c95Wj36zf0jA1G",
         "display": "Security Officer",
         "role": "security",
         "userId": "Security",
     },
     {
         "username": "electrician",
-        "password": "electrician",
+        "hashed_password": "$2b$12$OfjRD/cVQWRwuWFhP17Wi.nb0Uv1KG37YLTjiiwaF.9kiuyS/dcke",
         "display": "Electrical Tech",
         "role": "electrician",
         "userId": "Electrical",
     },
     {
         "username": "plumber",
-        "password": "plumber",
+        "hashed_password": "$2b$12$DYIllm7wdX4afnuv.UfGhu/1rODnUesbX0cHWYx9w8rostVE1H0ui",
         "display": "Plumbing Tech",
         "role": "plumber",
         "userId": "Plumbing",
     },
     {
         "username": "helpstaff",
-        "password": "helpstaff",
+        "hashed_password": "$2b$12$OVzrm7G1Q4Ov1muQuPk9KuqmJxydfwO6Uuwfsaz5JhGY5OYs2638S",
         "display": "Help Desk Staff",
         "role": "helpstaff",
         "userId": "HR",
     },
     {
         "username": "manager",
-        "password": "manager",
+        "hashed_password": "$2b$12$zppOejr6X24ha.zda8ygbuP9LEwiIL0zAFuA1WZ/5Qtq7t2VCE9Vm",
         "display": "Manager User",
         "role": "manager",
         "userId": "manager",
     },
 ]
 
-# Build user store — plain passwords stored only in this dict (in memory, never on disk/logs)
-# Passwords are verified via bcrypt at runtime, not hashed at import time
+# Build user store
 USERS: dict[str, dict] = {}
 for _u in _RAW_USERS:
     USERS[_u["username"]] = {
         "display": _u["display"],
         "role": _u["role"],
         "userId": _u["userId"],
-        "plain_pw": _u["password"],  # used only for bcrypt.verify() at login
+        "hashed_password": _u["hashed_password"],
     }
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 
-def _verify(plain: str, stored: str) -> bool:
-    """Constant-time password comparison. Uses bcrypt when available, falls back to hmac."""
-    import hmac
-
+def _verify(plain: str, hashed: str) -> bool:
+    """Verify password against bcrypt hash."""
     try:
-        return pwd_ctx.verify(plain, stored)
+        return pwd_ctx.verify(plain, hashed)
     except Exception:
-        # stored is a plain password (fallback for bcrypt 5.x compatibility)
-        return hmac.compare_digest(plain, stored)
+        return False
 
 
 def _create_token(data: dict, expires_delta: timedelta) -> str:
@@ -201,7 +195,7 @@ def login(req: LoginRequest):
     uname = req.username.lower()
     user = USERS.get(uname)
 
-    if user and _verify(req.password, user["plain_pw"]):
+    if user and _verify(req.password, user["hashed_password"]):
         access = _create_access_token(uname, user["role"], user["userId"])
         refresh = _create_refresh_token(uname)
         return TokenResponse(

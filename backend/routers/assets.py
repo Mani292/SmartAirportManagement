@@ -2,7 +2,9 @@ from typing import Optional
 
 import database as db
 import servicenow as sn
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from routers.auth import get_current_user
+from security.rbac import RoleChecker
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -24,7 +26,7 @@ class AssetUpdate(BaseModel):
 
 
 @router.get("/")
-def list_assets():
+def list_assets(user: dict = Depends(get_current_user)):
     res = sn.get_assets()
     if "error" in res:
         return {"result": db.db_get_assets(), "source": "fallback_db"}
@@ -32,7 +34,7 @@ def list_assets():
 
 
 @router.get("/{sys_id}")
-def get_asset(sys_id: str):
+def get_asset(sys_id: str, user: dict = Depends(get_current_user)):
     res = sn.get_asset(sys_id)
     if "error" in res:
         asset = db.db_get_asset(sys_id)
@@ -41,7 +43,7 @@ def get_asset(sys_id: str):
 
 
 @router.post("/")
-def create_asset(data: AssetCreate):
+def create_asset(data: AssetCreate, user: dict = Depends(RoleChecker(["admin", "manager"]))):
     payload = {
         "u_name": data.name,
         "u_type": data.asset_type,
@@ -58,7 +60,7 @@ def create_asset(data: AssetCreate):
 
 
 @router.patch("/{sys_id}")
-def update_asset(sys_id: str, update: AssetUpdate):
+def update_asset(sys_id: str, update: AssetUpdate, user: dict = Depends(get_current_user)):
     data = {k: v for k, v in update.model_dump().items() if v}
     res = sn.update_asset(sys_id, data)
     if "error" in res:

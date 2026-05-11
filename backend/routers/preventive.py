@@ -2,7 +2,9 @@ from typing import Optional
 
 import database as db
 import servicenow as sn
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from routers.auth import get_current_user
+from security.rbac import RoleChecker
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -24,7 +26,7 @@ class PreventiveUpdate(BaseModel):
 
 
 @router.get("/")
-def list_preventive():
+def list_preventive(user: dict = Depends(get_current_user)):
     res = sn.get_preventive_tasks()
     if "error" in res:
         return {"result": db.db_get_tasks(), "source": "fallback_db"}
@@ -32,7 +34,7 @@ def list_preventive():
 
 
 @router.post("/")
-def create_preventive(data: PreventiveCreate):
+def create_preventive(data: PreventiveCreate, user: dict = Depends(RoleChecker(["admin", "manager"]))):
     payload = {
         "u_title": data.title,
         "u_asset_name": data.asset_id,
@@ -50,7 +52,7 @@ def create_preventive(data: PreventiveCreate):
 
 
 @router.patch("/{sys_id}")
-def update_preventive(sys_id: str, update: PreventiveUpdate):
+def update_preventive(sys_id: str, update: PreventiveUpdate, user: dict = Depends(get_current_user)):
     data = {k: v for k, v in update.model_dump().items() if v}
     res = sn.update_preventive_task(sys_id, data)
     if "error" in res:

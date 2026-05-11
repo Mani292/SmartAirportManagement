@@ -109,3 +109,47 @@ def create_qr_location(data):
     url = f"{INSTANCE}/api/now/table/u_qr_location"
     res = requests.post(url, auth=auth, headers=headers, json=data)
     return res.json()
+
+
+# ── IoT & TELEMETRY (Future Scope Scaffolding) ──
+def log_telemetry(data):
+    """
+    Log sensor data to ServiceNow u_iot_telemetry table.
+    Includes u_airport_id for multi-tenant isolation.
+    """
+    url = f"{INSTANCE}/api/now/table/u_iot_telemetry"
+    # Ensure multi-tenancy ID is present
+    data.setdefault("u_airport_id", "SJC-01")
+    res = requests.post(url, auth=auth, headers=headers, json=data)
+    return res.json()
+
+
+def get_asset_health_metrics(asset_id):
+    """Fetch recent telemetry for an asset to perform anomaly detection."""
+    url = f"{INSTANCE}/api/now/table/u_iot_telemetry"
+    params = {
+        "sysparm_query": f"u_asset={asset_id}",
+        "sysparm_limit": 10,
+        "sysparm_orderbydesc": "sys_created_on"
+    }
+    res = requests.get(url, auth=auth, headers=headers, params=params)
+    return res.json()
+
+
+# ── AIRPORT-SPECIFIC ASSET TABLES (Lifecycle Management) ──
+def get_baggage_systems():
+    url = f"{INSTANCE}/api/now/table/u_baggage_system"
+    res = requests.get(url, auth=auth, headers=headers)
+    return res.json()
+
+
+def get_hvac_systems():
+    url = f"{INSTANCE}/api/now/table/u_hvac_system"
+    res = requests.get(url, auth=auth, headers=headers)
+    return res.json()
+
+
+def get_runway_lighting():
+    url = f"{INSTANCE}/api/now/table/u_runway_light"
+    res = requests.get(url, auth=auth, headers=headers)
+    return res.json()

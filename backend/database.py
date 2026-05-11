@@ -29,23 +29,54 @@ def init_db() -> None:
         c.execute("""
             CREATE TABLE IF NOT EXISTS fallback_assets (
                 sys_id          TEXT PRIMARY KEY,
+                u_airport_id    TEXT DEFAULT 'SJC-01',
                 u_name          TEXT NOT NULL,
                 u_type          TEXT NOT NULL,
                 u_location      TEXT NOT NULL,
                 u_terminal      TEXT NOT NULL,
                 u_status        TEXT DEFAULT 'operational',
                 u_last_serviced TEXT DEFAULT '',
+                u_criticality   TEXT DEFAULT 'Medium',
                 notes           TEXT DEFAULT ''
             )
         """)
 
-        # Seed default asset if table is empty
+        # Seed default assets if table is empty
         c.execute("SELECT COUNT(*) FROM fallback_assets")
         if c.fetchone()[0] == 0:
             c.execute("""
-                INSERT INTO fallback_assets VALUES
-                ('mock_asset_1','Elevator T1-A','Elevator','Gate 5','Terminal 1','operational','2026-04-01','')
+                INSERT INTO fallback_assets (sys_id, u_name, u_type, u_location, u_terminal, u_status, u_last_serviced, u_criticality) VALUES
+                ('mock_asset_1','Elevator T1-A','Elevator','Gate 5','Terminal 1','operational','2026-04-01', 'High'),
+                ('mock_asset_2','Baggage Belt 4','Baggage Conveyor','Arrivals','Terminal 2','operational','2026-03-15', 'High'),
+                ('mock_asset_3','HVAC Unit 12','HVAC','Roof','Terminal 1','maintenance','2026-05-01', 'Medium'),
+                ('mock_asset_4','Runway Light 22L','Runway Lighting','Runway 22L','Airside','operational','2026-04-20', 'Critical')
             """)
+
+        # ── IoT Telemetry ───────────────────────────────────────────────────────
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS fallback_iot_telemetry (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                asset_id        TEXT NOT NULL,
+                temperature     REAL,
+                vibration       REAL,
+                humidity        REAL,
+                status          TEXT,
+                timestamp       DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # ── Maintenance History ────────────────────────────────────────────────
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS fallback_maintenance_history (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                asset_id        TEXT NOT NULL,
+                technician_id   TEXT,
+                action_taken    TEXT,
+                parts_replaced  TEXT,
+                cost            REAL,
+                timestamp       DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
 
         # ── Preventive Tasks ────────────────────────────────────────────────────
         c.execute("""
@@ -272,5 +303,34 @@ def db_create_qr_location(payload: dict) -> dict:
         )
         conn.commit()
         return payload
+    finally:
+        conn.close()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# IoT helpers
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+def db_log_telemetry(asset_id: str, temp: float, vib: float, hum: float, status: str) -> None:
+    conn = get_connection()
+    try:
+        conn.execute(
+            "INSERT INTO fallback_iot_telemetry (asset_id, temperature, vibration, humidity, status) VALUES (?, ?, ?, ?, ?)",
+            (asset_id, temp, vib, hum, status),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def db_get_telemetry(asset_id: str, limit: int = 10) -> list[dict]:
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM fallback_iot_telemetry WHERE asset_id = ? ORDER BY timestamp DESC LIMIT ?",
+            (asset_id, limit),
+        ).fetchall()
+        return [dict(r) for r in rows]
     finally:
         conn.close()

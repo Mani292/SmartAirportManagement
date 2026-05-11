@@ -10,6 +10,10 @@ import { Incident } from "../../types";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store";
 import { Colors, Fonts, Radius } from "../../theme";
+import { LineChart, PieChart } from "react-native-chart-kit";
+import { Dimensions } from "react-native";
+
+const screenWidth = Dimensions.get("window").width;
 
 export default function DashboardScreen() {
     const [incidents, setIncidents] = useState<Incident[]>([]);
@@ -91,11 +95,36 @@ export default function DashboardScreen() {
                 <View style={styles.rateCard}>
                     <View style={styles.rateLeft}>
                         <Text style={styles.rateValue}>{resolutionRate}%</Text>
-                        <Text style={styles.rateLabel}>Resolution Rate</Text>
+                        <Text style={styles.rateLabel}>SLA Compliance</Text>
                     </View>
                     <View style={styles.rateBar}>
                         <View style={[styles.rateFill, { width: `${resolutionRate}%` as any }]} />
                     </View>
+                </View>
+
+                {/* Trend Chart */}
+                <Text style={styles.sectionLabel}>INCIDENT TREND (7 DAYS)</Text>
+                <View style={styles.chartCard}>
+                    <LineChart
+                        data={{
+                            labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+                            datasets: [{ data: [12, 19, 15, 8, 22, 14, total % 30] }]
+                        }}
+                        width={screenWidth - 40}
+                        height={180}
+                        chartConfig={{
+                            backgroundColor: Colors.bgCard,
+                            backgroundGradientFrom: Colors.bgCard,
+                            backgroundGradientTo: Colors.bgCard,
+                            decimalPlaces: 0,
+                            color: (opacity = 1) => `rgba(14, 165, 233, ${opacity})`,
+                            labelColor: (opacity = 1) => `rgba(148, 163, 184, ${opacity})`,
+                            style: { borderRadius: 16 },
+                            propsForDots: { r: "4", strokeWidth: "2", stroke: Colors.primary }
+                        }}
+                        bezier
+                        style={{ marginVertical: 8, borderRadius: 16 }}
+                    />
                 </View>
 
                 {/* Priority Breakdown */}
@@ -178,6 +207,14 @@ const styles = StyleSheet.create({
         marginTop: 20,
     },
     statsRow: { flexDirection: "row", marginBottom: 2 },
+    chartCard: {
+        backgroundColor: Colors.bgCard,
+        borderRadius: Radius.md,
+        padding: 10,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        alignItems: "center",
+    },
     rateCard: {
         backgroundColor: Colors.bgCard,
         borderRadius: Radius.md,
