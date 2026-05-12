@@ -6,7 +6,20 @@ from groq import AsyncGroq
 
 load_dotenv()
 
-client = AsyncGroq(api_key=os.getenv("GROQ_API_KEY"))
+_client = None
+
+
+def get_client():
+    global _client
+    if _client is None:
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            # Fallback for testing environment where LLM might not be used but code is imported
+            api_key = "mock_key"
+        _client = AsyncGroq(api_key=api_key)
+    return _client
+
+
 MODEL = "llama-3.1-8b-instant"
 
 
@@ -45,6 +58,7 @@ Return this exact JSON:
 Priority: 1=Critical(safety risk), 2=High(major impact), 3=Medium, 4=Low
 Important: "assigned_team" MUST be exactly one of: "Electrical", "Plumbing", "Security", "Facilities", "IT", "HR"
 """
+    client = get_client()
     res = await client.chat.completions.create(
         model=MODEL, messages=[{"role": "user", "content": prompt}], temperature=0.1
     )
@@ -65,6 +79,7 @@ Do not ask more than one question at a time."""
     messages.extend(conversation_history)
     messages.append({"role": "user", "content": sanitize_input(message)})
 
+    client = get_client()
     res = await client.chat.completions.create(
         model="llama-3.1-8b-instant", messages=messages, temperature=0.7
     )
@@ -82,6 +97,7 @@ Give numbered step-by-step repair guidance.
 Mark any safety warnings with [SAFETY].
 Be practical and concise. Maximum 10 steps.
 """
+    client = get_client()
     res = await client.chat.completions.create(
         model=MODEL, messages=[{"role": "user", "content": prompt}], temperature=0.3
     )
@@ -95,6 +111,7 @@ Original Issue: {sanitize_input(description)}
 Resolution Notes: {sanitize_input(notes)}
 Keep it under 3 sentences. Professional tone. No fluff.
 """
+    client = get_client()
     res = await client.chat.completions.create(
         model=MODEL, messages=[{"role": "user", "content": prompt}], temperature=0.2
     )
