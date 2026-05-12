@@ -56,7 +56,8 @@ Return this exact JSON:
 }}
 
 Priority: 1=Critical(safety risk), 2=High(major impact), 3=Medium, 4=Low
-Important: "assigned_team" MUST be exactly one of: "Electrical", "Plumbing", "Security", "Facilities", "IT", "HR"
+Important: "assigned_team" MUST be exactly one of: "Electrical", "Plumbing", "Security", "Facilities", "IT", "HR", "Drone Fleet"
+Special Rule: If the incident involves a runway perimeter breach, suspicious package, or external threat, assign it to "Drone Fleet" for immediate automated visual verification.
 """
     client = get_client()
     res = await client.chat.completions.create(

@@ -143,6 +143,18 @@ def init_db() -> None:
             )
         """)
 
+        # ── ESG Sustainability Metrics ─────────────────────────────────────────
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS u_energy_metrics (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                u_airport_id    TEXT DEFAULT 'SJC-01',
+                asset_id        TEXT NOT NULL,
+                kwh_consumed    REAL,
+                carbon_saved    REAL,
+                timestamp       DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
         conn.commit()
         print("[DB] SQLite initialized ->", DB_PATH)
     finally:

@@ -3,7 +3,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell 
 } from 'recharts';
-import { Shield, Activity, Clock, Server } from 'lucide-react';
+import { Shield, Activity, Clock, Server, Leaf } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || "https://smart-airport.vercel.app/api/v1";
@@ -89,6 +89,14 @@ export default function PublicDashboard() {
           <div>
             <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">Avg MTTR</p>
             <p className="text-3xl font-black text-purple-600">2.4h</p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center space-x-4 md:col-span-4 lg:col-span-1">
+          <div className="p-3 bg-green-50 text-green-700 rounded-lg"><Leaf size={24} /></div>
+          <div>
+            <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">Carbon Offset (ESG)</p>
+            <p className="text-3xl font-black text-green-700">12.4t</p>
           </div>
         </div>
       </div>
