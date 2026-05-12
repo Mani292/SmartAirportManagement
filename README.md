@@ -4,16 +4,17 @@ An AI-powered, full-stack airport operations platform that lets passengers repor
 
 ---
 
-## 🎯 What It Does
+## 🎯 Core Enterprise Features
 
 | Feature | Details |
 |---|---|
-| 📱 **Passenger Portal** | Scan a QR code → select problem type → submit issue → get incident number instantly |
-| 🤖 **AI Triage (AeroBot)** | Groq LLM automatically categorizes every issue and assigns it to the right team |
-| 📋 **Staff Mobile App** | Security, Electrician, Plumber, Help Staff — each see only their assigned tasks |
-| 🔔 **Instant Notifications** | Passengers receive WhatsApp + email confirmation with the ServiceNow incident number |
-| 🏢 **Manager Dashboard** | Real-time KPI overview — open/resolved/critical incidents, priority breakdown, resolution rate |
-| 🔐 **Request Access Flow** | New staff select their role and receive login credentials via email or WhatsApp |
+| 🤖 **AI-Powered Triage** | Groq LLM automatically categorizes, prioritizes, and assigns incidents with estimated resolution times. |
+| 🛡️ **Enterprise Security** | JWT-based auth with bcrypt hashing, secure random credential dispatch, and centralized audit logging. |
+| ⚡ **Async Performance** | Fully asynchronous backend architecture (`FastAPI` + `httpx`) for high-concurrency airport operations. |
+| 📱 **Mobile-First Staff App** | Role-based dashboards for Security, Electrical, Plumbing, and Facilities teams. |
+| 🔔 **Omni-Channel Alerts** | Passenger and staff notifications via WhatsApp (WAHA) and professional Email (SMTP). |
+| 🏢 **Operational Metrics** | Management dashboard with real-time SLA tracking and airport health indicators. |
+| 🔐 **Request Access Flow** | Seamless onboarding for new staff with secure, multi-channel credential delivery. |
 
 ---
 
@@ -271,11 +272,11 @@ WAHA_API_KEY=your_key
 | PATCH | `/api/incidents/{sys_id}` | Update incident state |
 | GET | `/api/incidents/track/{number}` | Track by incident number |
 
-### Technician
+### Metrics & Monitoring
 | Method | Endpoint | Description |
 |---|---|---|
-| GET | `/api/technician/tasks/{assigned_to}` | Get assigned tasks |
-| GET | `/api/technician/stats/{assigned_to}` | Get personal stats |
+| GET | `/api/v1/metrics/` | Operational KPIs & SLA Status |
+| GET | `/health` | System health check |
 
 Full interactive docs: `http://localhost:8000/docs`
 
@@ -304,15 +305,15 @@ Full interactive docs: `http://localhost:8000/docs`
 
 | Layer | Technology |
 |---|---|
-| **Backend API** | Python, FastAPI, Uvicorn |
-| **AI Triage** | Groq (Llama 3), Groq SDK |
-| **ITSM Platform** | ServiceNow REST API |
+| **Backend API** | Python, FastAPI, Uvicorn (Fully Asynchronous) |
+| **Async Clients** | `httpx` (ServiceNow), `AsyncGroq` (AI) |
+| **AI Triage** | Groq (Llama 3.1 8B), Groq SDK |
+| **ITSM Platform** | ServiceNow REST API (v1 with Async Integration) |
 | **Mobile App** | React Native, Expo, TypeScript |
 | **State Management** | Redux Toolkit |
 | **Passenger Portal** | Vite, React, TypeScript |
-| **Email** | SMTP (Gmail) |
-| **WhatsApp** | WAHA (open-source API) |
-| **Design** | Glassmorphism dark theme, Outfit + Inter fonts |
+| **Monitoring** | Centralized Audit Logging, Operational Metrics API |
+| **Design** | Glassmorphism, Outfit + Inter fonts |
 
 ---
 
