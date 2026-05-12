@@ -2,11 +2,11 @@ import json
 import os
 
 from dotenv import load_dotenv
-from groq import Groq
+from groq import AsyncGroq
 
 load_dotenv()
 
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+client = AsyncGroq(api_key=os.getenv("GROQ_API_KEY"))
 MODEL = "llama-3.1-8b-instant"
 
 
@@ -22,7 +22,7 @@ def sanitize_input(text: str) -> str:
     return sanitized.strip()
 
 
-def triage_incident(description, location, area, department):
+async def triage_incident(description, location, area, department):
     prompt = f"""
 You are an airport operations AI triage assistant.
 Analyze this incident and return ONLY valid JSON, nothing else. No explanation.
@@ -45,7 +45,7 @@ Return this exact JSON:
 Priority: 1=Critical(safety risk), 2=High(major impact), 3=Medium, 4=Low
 Important: "assigned_team" MUST be exactly one of: "Electrical", "Plumbing", "Security", "Facilities", "IT", "HR"
 """
-    res = client.chat.completions.create(
+    res = await client.chat.completions.create(
         model=MODEL, messages=[{"role": "user", "content": prompt}], temperature=0.1
     )
     content = res.choices[0].message.content.strip()
@@ -53,7 +53,7 @@ Important: "assigned_team" MUST be exactly one of: "Electrical", "Plumbing", "Se
     return json.loads(content)
 
 
-def chat_with_passenger(message, conversation_history):
+async def chat_with_passenger(message, conversation_history):
     system = """You are a friendly airport assistant helping passengers report facility issues.
 Ask for location if not provided.
 Ask for description of the issue if not clear.
@@ -65,13 +65,13 @@ Do not ask more than one question at a time."""
     messages.extend(conversation_history)
     messages.append({"role": "user", "content": sanitize_input(message)})
 
-    res = client.chat.completions.create(
+    res = await client.chat.completions.create(
         model="llama-3.1-8b-instant", messages=messages, temperature=0.7
     )
     return res.choices[0].message.content
 
 
-def get_kb_answer(question, asset, issue):
+async def get_kb_answer(question, asset, issue):
     prompt = f"""
 You are a senior airport facility maintenance expert.
 Asset: {sanitize_input(asset)}
@@ -82,20 +82,20 @@ Give numbered step-by-step repair guidance.
 Mark any safety warnings with [SAFETY].
 Be practical and concise. Maximum 10 steps.
 """
-    res = client.chat.completions.create(
+    res = await client.chat.completions.create(
         model=MODEL, messages=[{"role": "user", "content": prompt}], temperature=0.3
     )
     return res.choices[0].message.content
 
 
-def generate_resolution_summary(description, notes):
+async def generate_resolution_summary(description, notes):
     prompt = f"""
 Write a short professional resolution summary for this airport maintenance incident.
 Original Issue: {sanitize_input(description)}
 Resolution Notes: {sanitize_input(notes)}
 Keep it under 3 sentences. Professional tone. No fluff.
 """
-    res = client.chat.completions.create(
+    res = await client.chat.completions.create(
         model=MODEL, messages=[{"role": "user", "content": prompt}], temperature=0.2
     )
     return res.choices[0].message.content

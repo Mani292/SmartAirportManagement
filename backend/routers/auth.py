@@ -10,6 +10,8 @@ Security improvements:
 """
 
 import os
+import secrets
+import string
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -109,6 +111,12 @@ def _verify(plain: str, hashed: str) -> bool:
         return False
 
 
+def generate_secure_password(length: int = 12) -> str:
+    """Generate a secure random password."""
+    alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
 def _create_token(data: dict, expires_delta: timedelta) -> str:
     payload = data.copy()
     payload["exp"] = datetime.now(timezone.utc) + expires_delta
@@ -190,7 +198,7 @@ class RefreshRequest(BaseModel):
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(req: LoginRequest):
+async def login(req: LoginRequest):
     """Authenticate and return JWT access + refresh tokens."""
     uname = req.username.lower()
     user = USERS.get(uname)
@@ -214,7 +222,7 @@ def login(req: LoginRequest):
 
 
 @router.post("/refresh")
-def refresh_token(req: RefreshRequest):
+async def refresh_token(req: RefreshRequest):
     """Issue a new access token using a valid refresh token."""
     try:
         payload = jwt.decode(req.refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -238,7 +246,7 @@ def refresh_token(req: RefreshRequest):
 
 
 @router.get("/me")
-def get_me(current_user: dict = Depends(get_current_user)):
+async def get_me(current_user: dict = Depends(get_current_user)):
     """Return the currently authenticated user's profile."""
     return {"success": True, **current_user}
 
@@ -267,16 +275,19 @@ _ROLE_MAP = {
 
 
 @router.post("/request-access")
-def request_access(req: RequestAccess):
+async def request_access(req: RequestAccess):
     """Dispatch credentials to the requesting user via email/WhatsApp."""
     r = req.role.lower()
     username = _ROLE_MAP.get(r)
     if not username:
         raise HTTPException(status_code=400, detail="Invalid role")
 
-    # Use the role name as the default password (same as before, but now
-    # communicated securely over email/WhatsApp rather than exposed in code)
-    password = username
+    # Generate a secure random password instead of using the username
+    password = generate_secure_password()
+    
+    # Update the in-memory user store with the new hashed password
+    # In a production system, this would update a persistent database.
+    USERS[username]["hashed_password"] = pwd_ctx.hash(password)
 
     email_sent = False
     wa_sent = False
@@ -284,7 +295,7 @@ def request_access(req: RequestAccess):
     if req.email:
         email_sent = send_credentials(req.email, req.role, username, password)
     if req.phone:
-        wa_sent = send_credentials_wa(req.phone, req.role, username, password)
+        wa_sent = await send_credentials_wa(req.phone, req.role, username, password)
 
     return {
         "success": True,

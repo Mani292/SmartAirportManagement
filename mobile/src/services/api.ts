@@ -6,18 +6,20 @@ import { Platform } from "react-native";
 // For production, point this to your deployed backend URL.
 // Android emulator must use 10.0.2.2 instead of 127.0.0.1/localhost.
 const getBaseUrl = () => {
-    // Production URL (set this to your deployed backend)
-    // e.g., "https://api.yourdomain.com/api"
-    // return "https://api.yourdomain.com/api";
+    // Priority 1: Environment variable (recommended for prod and local dev)
+    if (process.env.EXPO_PUBLIC_API_URL) {
+        return process.env.EXPO_PUBLIC_API_URL;
+    }
 
-    // Local development fallback
+    // Fallback logic for local development if .env is missing
     if (Platform.OS === "android") {
-        return "http://10.0.2.2:8000/api"; // Android emulator
+        return "http://10.0.2.2:8000/api/v1"; // Android emulator
     }
     if (Platform.OS === "web") {
-        return "http://localhost:8000/api"; // Browser web build
+        return "http://localhost:8000/api/v1"; // Browser web build
     }
-    return "http://192.168.31.230:8000/api"; // Local WiFi IP — change to your machine's IP
+    // Default fallback
+    return "http://localhost:8000/api/v1";
 };
 
 const BASE_URL = getBaseUrl();
