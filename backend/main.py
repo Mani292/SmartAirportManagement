@@ -2,8 +2,11 @@ from contextlib import asynccontextmanager
 
 import database
 from dotenv import load_dotenv
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, Request
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from routers import (ai, assets, auth, incidents, iot, notifications, preventive,
                      qrcode_router, technician)
 
@@ -17,12 +20,17 @@ async def lifespan(app: FastAPI):
     yield
 
 
+limiter = Limiter(key_func=get_remote_address)
+
 app = FastAPI(
     title="Smart Airport Management API",
     description="AI-Powered Airport Operations Platform — FastAPI backend with ServiceNow, Groq AI triage, WhatsApp/Email notifications, and SQLite fallback persistence.",
     version="2.0.0",
     lifespan=lifespan,
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,

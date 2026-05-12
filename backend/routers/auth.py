@@ -271,6 +271,20 @@ _ROLE_MAP = {
 }
 
 
+import secrets
+import string
+
+def generate_password(length=12):
+    chars = (
+        string.ascii_letters +
+        string.digits +
+        "!@#$%"
+    )
+    return ''.join(
+        secrets.choice(chars)
+        for _ in range(length)
+    )
+
 @router.post("/request-access")
 def request_access(req: RequestAccess):
     """Dispatch credentials to the requesting user via email/WhatsApp."""
@@ -279,17 +293,19 @@ def request_access(req: RequestAccess):
     if not username:
         raise HTTPException(status_code=400, detail="Invalid role")
 
-    # Use the role name as the default password (same as before, but now
-    # communicated securely over email/WhatsApp rather than exposed in code)
-    password = username
+    temp_password = generate_password()
+    hashed = pwd_ctx.hash(temp_password)
+
+    # Store the generated temp_password hash dynamically here
+    USERS[username]["hashed_password"] = hashed
 
     email_sent = False
     wa_sent = False
 
     if req.email:
-        email_sent = send_credentials(req.email, req.role, username, password)
+        email_sent = send_credentials(req.email, req.role, username, temp_password)
     if req.phone:
-        wa_sent = send_credentials_wa(req.phone, req.role, username, password)
+        wa_sent = send_credentials_wa(req.phone, req.role, username, temp_password)
 
     return {
         "success": True,

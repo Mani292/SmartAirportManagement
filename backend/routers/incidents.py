@@ -8,8 +8,13 @@ from pydantic import BaseModel
 from whatsapp import send_confirmation, send_resolution
 from routers.auth import get_current_user
 from security.rbac import require_role
+from fastapi import Request
 
 router = APIRouter()
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+limiter = Limiter(key_func=get_remote_address)
 
 
 class IncidentCreate(BaseModel):
@@ -68,7 +73,8 @@ def get_incident(sys_id: str, user=Depends(get_current_user)):
 
 
 @router.post("/")
-def create_incident(data: IncidentCreate, user=Depends(get_current_user)):
+@limiter.limit("5/minute")
+def create_incident(request: Request, data: IncidentCreate, user=Depends(get_current_user)):
     try:
         # Step 1 — AI Triage
         triage = llm.triage_incident(

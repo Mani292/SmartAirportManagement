@@ -7,8 +7,9 @@ import { Platform } from "react-native";
 // Android emulator must use 10.0.2.2 instead of 127.0.0.1/localhost.
 const getBaseUrl = () => {
     // Production URL (set this to your deployed backend)
-    // e.g., "https://api.yourdomain.com/api"
-    // return "https://api.yourdomain.com/api";
+    if (process.env.EXPO_PUBLIC_API_URL) {
+        return process.env.EXPO_PUBLIC_API_URL;
+    }
 
     // Local development fallback
     if (Platform.OS === "android") {
