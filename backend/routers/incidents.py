@@ -4,6 +4,7 @@ import llm
 import servicenow as sn
 from email_service import send_task_assignment
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi.concurrency import run_in_threadpool
 from routers.auth import get_current_user
 from security.rbac import RoleChecker
 from pydantic import BaseModel
@@ -88,9 +89,7 @@ async def create_incident(data: IncidentCreate):
         sla_mins = priority_sla_map.get(str(triage["priority"]), 240)
         target_resolution = (datetime.now() + timedelta(minutes=sla_mins)).isoformat()
 
-        # Step 2 — Build ServiceNow payload using ONLY standard incident fields
-        # Custom fields (u_department, u_area, etc.) may not exist in the instance
-        # and can trigger Business Rules. Store metadata in description/work_notes.
+        # Step 2 — Build ServiceNow payload
         ai_notes = (
             f"🤖 AI Triage Result:\n"
             f"  Team: {triage['assigned_team']}\n"
@@ -118,7 +117,7 @@ async def create_incident(data: IncidentCreate):
             "u_sla_minutes": sla_mins,
         }
 
-        # Step 3 — Create in ServiceNow
+        # Step 3 — Create in ServiceNow (Async)
         result = await sn.create_incident(payload)
         
         # Log Audit
@@ -136,7 +135,7 @@ async def create_incident(data: IncidentCreate):
         whatsapp_sent = False
         email_sent = False
 
-        # Step 4 — WhatsApp confirmation to passenger
+        # Step 4 — WhatsApp confirmation to passenger (Async)
         if data.reporter_phone:
             try:
                 whatsapp_sent = await send_confirmation(
@@ -145,10 +144,11 @@ async def create_incident(data: IncidentCreate):
             except Exception as wa_err:
                 print(f"[WARN] WhatsApp send failed: {wa_err}")
 
-        # Step 5 — Email task assignment notification
+        # Step 5 — Email task assignment notification (Sync wrapper)
         if data.reporter_email:
             try:
-                email_sent = send_task_assignment(
+                email_sent = await run_in_threadpool(
+                    send_task_assignment,
                     data.reporter_email,
                     inc_number,
                     data.short_description,
