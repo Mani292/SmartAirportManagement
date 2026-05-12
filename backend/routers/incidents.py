@@ -4,6 +4,7 @@ import llm
 import servicenow as sn
 from email_service import send_task_assignment
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi.concurrency import run_in_threadpool
 from routers.auth import get_current_user
 from security.rbac import RoleChecker
 from pydantic import BaseModel
@@ -68,10 +69,11 @@ def get_incident(sys_id: str, user: dict = Depends(get_current_user)):
 
 
 @router.post("/")
-def create_incident(data: IncidentCreate):
+async def create_incident(data: IncidentCreate):
     try:
         # Step 1 — AI Triage
-        triage = llm.triage_incident(
+        triage = await run_in_threadpool(
+            llm.triage_incident,
             data.short_description, data.location, data.area, data.department
         )
 
@@ -104,7 +106,7 @@ def create_incident(data: IncidentCreate):
         }
 
         # Step 3 — Create in ServiceNow
-        result = sn.create_incident(payload)
+        result = await run_in_threadpool(sn.create_incident, payload)
 
         # Handle failure
         if result.get("status") == "failure" or "error" in result:
@@ -120,7 +122,8 @@ def create_incident(data: IncidentCreate):
         # Step 4 — WhatsApp confirmation to passenger
         if data.reporter_phone:
             try:
-                whatsapp_sent = send_confirmation(
+                whatsapp_sent = await run_in_threadpool(
+                    send_confirmation,
                     data.reporter_phone, inc_number, data.short_description
                 )
             except Exception as wa_err:
@@ -129,7 +132,8 @@ def create_incident(data: IncidentCreate):
         # Step 5 — Email task assignment notification
         if data.reporter_email:
             try:
-                email_sent = send_task_assignment(
+                email_sent = await run_in_threadpool(
+                    send_task_assignment,
                     data.reporter_email,
                     inc_number,
                     data.short_description,

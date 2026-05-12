@@ -14,7 +14,7 @@ class TelemetryData(BaseModel):
     humidity: Optional[float] = 40.0
 
 @router.post("/sensor-data")
-def receive_sensor_data(data: TelemetryData):
+async def receive_sensor_data(data: TelemetryData):
     """
     Ingest IoT sensor data, log it, and trigger AI anomaly detection.
     If an anomaly is found, it automatically creates a high-priority incident.
@@ -34,7 +34,7 @@ def receive_sensor_data(data: TelemetryData):
             department="Facilities",
             reported_via="IoT_Sensor"
         )
-        create_incident(incident)
+        await create_incident(incident)
         return {"status": "anomaly_detected", "type": anomaly, "action": "incident_created"}
     
     return {"status": "received", "anomaly": False}
