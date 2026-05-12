@@ -11,7 +11,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from routers import (ai, assets, auth, incidents, notifications, preventive,
-                     qrcode_router, technician, iot, metrics)
+                     qrcode_router, technician, iot, metrics, ws)
 
 load_dotenv()
 
@@ -79,6 +79,7 @@ app.include_router(notifications.router, prefix=f"{API_V1}/notify", tags=["Notif
 app.include_router(qrcode_router.router, prefix=f"{API_V1}/qr", tags=["QR Code"])
 app.include_router(iot.router, prefix=f"{API_V1}/iot", tags=["IoT"])
 app.include_router(metrics.router, prefix=f"{API_V1}/metrics", tags=["Metrics"])
+app.include_router(ws.router, tags=["WebSockets"])
 
 
 @app.get("/")

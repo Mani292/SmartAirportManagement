@@ -25,9 +25,9 @@ def init_db() -> None:
     try:
         c = conn.cursor()
 
-        # ── Assets ─────────────────────────────────────────────────────────────
+        # ── Assets (ServiceNow CMDB Model) ─────────────────────────────────────
         c.execute("""
-            CREATE TABLE IF NOT EXISTS fallback_assets (
+            CREATE TABLE IF NOT EXISTS u_airport_asset (
                 sys_id          TEXT PRIMARY KEY,
                 u_airport_id    TEXT DEFAULT 'SJC-01',
                 u_name          TEXT NOT NULL,
@@ -40,22 +40,30 @@ def init_db() -> None:
                 notes           TEXT DEFAULT ''
             )
         """)
+        # Specific CMDB child tables
+        c.execute("CREATE TABLE IF NOT EXISTS u_hvac_system (sys_id TEXT PRIMARY KEY, u_airport_id TEXT, cooling_capacity TEXT)")
+        c.execute("CREATE TABLE IF NOT EXISTS u_baggage_system (sys_id TEXT PRIMARY KEY, u_airport_id TEXT, belt_length TEXT)")
+        c.execute("CREATE TABLE IF NOT EXISTS u_runway (sys_id TEXT PRIMARY KEY, u_airport_id TEXT, surface_type TEXT)")
+        c.execute("CREATE TABLE IF NOT EXISTS u_escalator (sys_id TEXT PRIMARY KEY, u_airport_id TEXT, steps_count INTEGER)")
+        c.execute("CREATE TABLE IF NOT EXISTS u_digital_display (sys_id TEXT PRIMARY KEY, u_airport_id TEXT, resolution TEXT)")
+
 
         # Seed default assets if table is empty
-        c.execute("SELECT COUNT(*) FROM fallback_assets")
+        c.execute("SELECT COUNT(*) FROM u_airport_asset")
         if c.fetchone()[0] == 0:
             c.execute("""
-                INSERT INTO fallback_assets (sys_id, u_name, u_type, u_location, u_terminal, u_status, u_last_serviced, u_criticality) VALUES
-                ('mock_asset_1','Elevator T1-A','Elevator','Gate 5','Terminal 1','operational','2026-04-01', 'High'),
-                ('mock_asset_2','Baggage Belt 4','Baggage Conveyor','Arrivals','Terminal 2','operational','2026-03-15', 'High'),
-                ('mock_asset_3','HVAC Unit 12','HVAC','Roof','Terminal 1','maintenance','2026-05-01', 'Medium'),
-                ('mock_asset_4','Runway Light 22L','Runway Lighting','Runway 22L','Airside','operational','2026-04-20', 'Critical')
+                INSERT INTO u_airport_asset (sys_id, u_airport_id, u_name, u_type, u_location, u_terminal, u_status, u_last_serviced, u_criticality) VALUES
+                ('mock_asset_1','SJC-01','Elevator T1-A','Elevator','Gate 5','Terminal 1','operational','2026-04-01', 'High'),
+                ('mock_asset_2','SJC-01','Baggage Belt 4','Baggage Conveyor','Arrivals','Terminal 2','operational','2026-03-15', 'High'),
+                ('mock_asset_3','SJC-01','HVAC Unit 12','HVAC','Roof','Terminal 1','maintenance','2026-05-01', 'Medium'),
+                ('mock_asset_4','SJC-01','Runway Light 22L','Runway Lighting','Runway 22L','Airside','operational','2026-04-20', 'Critical')
             """)
 
-        # ── IoT Telemetry ───────────────────────────────────────────────────────
+        # ── IoT Telemetry (ServiceNow Model) ────────────────────────────────────
         c.execute("""
-            CREATE TABLE IF NOT EXISTS fallback_iot_telemetry (
+            CREATE TABLE IF NOT EXISTS u_iot_sensor (
                 id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                u_airport_id    TEXT DEFAULT 'SJC-01',
                 asset_id        TEXT NOT NULL,
                 temperature     REAL,
                 vibration       REAL,
@@ -67,8 +75,9 @@ def init_db() -> None:
 
         # ── Maintenance History ────────────────────────────────────────────────
         c.execute("""
-            CREATE TABLE IF NOT EXISTS fallback_maintenance_history (
+            CREATE TABLE IF NOT EXISTS u_maintenance_history (
                 id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                u_airport_id    TEXT DEFAULT 'SJC-01',
                 asset_id        TEXT NOT NULL,
                 technician_id   TEXT,
                 action_taken    TEXT,
@@ -80,8 +89,9 @@ def init_db() -> None:
 
         # ── Preventive Tasks ────────────────────────────────────────────────────
         c.execute("""
-            CREATE TABLE IF NOT EXISTS fallback_tasks (
+            CREATE TABLE IF NOT EXISTS u_preventive_task (
                 sys_id          TEXT PRIMARY KEY,
+                u_airport_id    TEXT DEFAULT 'SJC-01',
                 u_title         TEXT NOT NULL,
                 u_asset_name    TEXT NOT NULL,
                 u_assigned_team TEXT NOT NULL,
@@ -94,31 +104,44 @@ def init_db() -> None:
             )
         """)
 
-        c.execute("SELECT COUNT(*) FROM fallback_tasks")
+        c.execute("SELECT COUNT(*) FROM u_preventive_task")
         if c.fetchone()[0] == 0:
             c.execute("""
-                INSERT INTO fallback_tasks VALUES
-                ('mock_prev_1','Monthly Elevator Inspection','Elevator T1-A',
+                INSERT INTO u_preventive_task VALUES
+                ('mock_prev_1','SJC-01','Monthly Elevator Inspection','Elevator T1-A',
                  'Facilities Team','2026-05-01 00:00:00','Monthly',
                  'Check cables and door sensors.','scheduled','','')
             """)
 
         # ── QR Locations ────────────────────────────────────────────────────────
         c.execute("""
-            CREATE TABLE IF NOT EXISTS fallback_qr_locations (
+            CREATE TABLE IF NOT EXISTS u_qr_location (
                 sys_id          TEXT PRIMARY KEY,
+                u_airport_id    TEXT DEFAULT 'SJC-01',
                 u_terminal      TEXT NOT NULL,
                 u_area          TEXT NOT NULL,
                 u_location_code TEXT NOT NULL UNIQUE
             )
         """)
 
-        c.execute("SELECT COUNT(*) FROM fallback_qr_locations")
+        c.execute("SELECT COUNT(*) FROM u_qr_location")
         if c.fetchone()[0] == 0:
             c.execute("""
-                INSERT INTO fallback_qr_locations VALUES
-                ('mock_qr_1','Terminal 1','Restroom','T1-R-A')
+                INSERT INTO u_qr_location VALUES
+                ('mock_qr_1','SJC-01','Terminal 1','Restroom','T1-R-A')
             """)
+
+        # ── Audit Logs ─────────────────────────────────────────────────────────
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS u_audit_log (
+                sys_id          TEXT PRIMARY KEY,
+                u_airport_id    TEXT DEFAULT 'SJC-01',
+                actor           TEXT,
+                action          TEXT,
+                details         TEXT,
+                timestamp       DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
 
         conn.commit()
         print("[DB] SQLite initialized ->", DB_PATH)
@@ -143,10 +166,10 @@ ALLOWED_ASSET_FIELDS = {
 }
 
 
-def db_get_assets() -> list[dict]:
+def db_get_assets(airport_id: str = 'SJC-01') -> list[dict]:
     conn = get_connection()
     try:
-        rows = conn.execute("SELECT * FROM fallback_assets").fetchall()
+        rows = conn.execute("SELECT * FROM u_airport_asset WHERE u_airport_id = ?", (airport_id,)).fetchall()
         return [dict(r) for r in rows]
     finally:
         conn.close()
@@ -156,7 +179,7 @@ def db_get_asset(sys_id: str) -> dict | None:
     conn = get_connection()
     try:
         row = conn.execute(
-            "SELECT * FROM fallback_assets WHERE sys_id = ?", (sys_id,)
+            "SELECT * FROM u_airport_asset WHERE sys_id = ?", (sys_id,)
         ).fetchone()
         return dict(row) if row else None
     finally:
@@ -171,13 +194,14 @@ def db_create_asset(payload: dict) -> dict:
     try:
         conn.execute(
             """
-            INSERT OR IGNORE INTO fallback_assets
-            (sys_id, u_name, u_type, u_location, u_terminal, u_status, u_last_serviced, notes)
-            VALUES (:sys_id, :u_name, :u_type, :u_location, :u_terminal,
+            INSERT OR IGNORE INTO u_airport_asset
+            (sys_id, u_airport_id, u_name, u_type, u_location, u_terminal, u_status, u_last_serviced, notes)
+            VALUES (:sys_id, :u_airport_id, :u_name, :u_type, :u_location, :u_terminal,
                     :u_status, :u_last_serviced, :notes)
         """,
             {
                 "sys_id": payload.get("sys_id"),
+                "u_airport_id": payload.get("u_airport_id", "SJC-01"),
                 "u_name": payload.get("u_name", payload.get("name", "")),
                 "u_type": payload.get("u_type", payload.get("asset_type", "")),
                 "u_location": payload.get("u_location", payload.get("location", "")),
@@ -208,7 +232,7 @@ def db_update_asset(sys_id: str, updates: dict) -> dict | None:
     try:
         fields = ", ".join(f"{k} = ?" for k in updates)
         values = list(updates.values()) + [sys_id]
-        conn.execute(f"UPDATE fallback_assets SET {fields} WHERE sys_id = ?", values)
+        conn.execute(f"UPDATE u_airport_asset SET {fields} WHERE sys_id = ?", values)
         conn.commit()
         return db_get_asset(sys_id)
     finally:
@@ -232,10 +256,10 @@ ALLOWED_TASK_FIELDS = {
 }
 
 
-def db_get_tasks() -> list[dict]:
+def db_get_tasks(airport_id: str = 'SJC-01') -> list[dict]:
     conn = get_connection()
     try:
-        rows = conn.execute("SELECT * FROM fallback_tasks").fetchall()
+        rows = conn.execute("SELECT * FROM u_preventive_task WHERE u_airport_id = ?", (airport_id,)).fetchall()
         return [dict(r) for r in rows]
     finally:
         conn.close()
@@ -245,7 +269,7 @@ def db_get_task(sys_id: str) -> dict | None:
     conn = get_connection()
     try:
         row = conn.execute(
-            "SELECT * FROM fallback_tasks WHERE sys_id = ?", (sys_id,)
+            "SELECT * FROM u_preventive_task WHERE sys_id = ?", (sys_id,)
         ).fetchone()
         return dict(row) if row else None
     finally:
@@ -260,14 +284,15 @@ def db_create_task(payload: dict) -> dict:
     try:
         conn.execute(
             """
-            INSERT OR IGNORE INTO fallback_tasks
-            (sys_id, u_title, u_asset_name, u_assigned_team, u_due_date,
+            INSERT OR IGNORE INTO u_preventive_task
+            (sys_id, u_airport_id, u_title, u_asset_name, u_assigned_team, u_due_date,
              u_frequency, u_description, u_status, notes, completed_date)
-            VALUES (:sys_id,:u_title,:u_asset_name,:u_assigned_team,:u_due_date,
+            VALUES (:sys_id,:u_airport_id,:u_title,:u_asset_name,:u_assigned_team,:u_due_date,
                     :u_frequency,:u_description,:u_status,:notes,:completed_date)
         """,
             {
                 "sys_id": payload.get("sys_id"),
+                "u_airport_id": payload.get("u_airport_id", "SJC-01"),
                 "u_title": payload.get("u_title", ""),
                 "u_asset_name": payload.get("u_asset_name", ""),
                 "u_assigned_team": payload.get("u_assigned_team", ""),
@@ -298,7 +323,7 @@ def db_update_task(sys_id: str, updates: dict) -> dict | None:
     try:
         fields = ", ".join(f"{k} = ?" for k in updates)
         values = list(updates.values()) + [sys_id]
-        conn.execute(f"UPDATE fallback_tasks SET {fields} WHERE sys_id = ?", values)
+        conn.execute(f"UPDATE u_preventive_task SET {fields} WHERE sys_id = ?", values)
         conn.commit()
         return db_get_task(sys_id)
     finally:
@@ -313,7 +338,7 @@ def db_update_task(sys_id: str, updates: dict) -> dict | None:
 def db_get_qr_locations() -> list[dict]:
     conn = get_connection()
     try:
-        rows = conn.execute("SELECT * FROM fallback_qr_locations").fetchall()
+        rows = conn.execute("SELECT * FROM u_qr_location").fetchall()
         return [dict(r) for r in rows]
     finally:
         conn.close()
@@ -327,11 +352,12 @@ def db_create_qr_location(payload: dict) -> dict:
     try:
         conn.execute(
             """
-            INSERT OR IGNORE INTO fallback_qr_locations (sys_id, u_terminal, u_area, u_location_code)
-            VALUES (:sys_id, :u_terminal, :u_area, :u_location_code)
+            INSERT OR IGNORE INTO u_qr_location (sys_id, u_airport_id, u_terminal, u_area, u_location_code)
+            VALUES (:sys_id, :u_airport_id, :u_terminal, :u_area, :u_location_code)
         """,
             {
                 "sys_id": payload.get("sys_id"),
+                "u_airport_id": payload.get("u_airport_id", "SJC-01"),
                 "u_terminal": payload.get("u_terminal", ""),
                 "u_area": payload.get("u_area", ""),
                 "u_location_code": payload.get("u_location_code", ""),
@@ -352,7 +378,7 @@ def db_log_telemetry(asset_id: str, temp: float, vib: float, hum: float, status:
     conn = get_connection()
     try:
         conn.execute(
-            "INSERT INTO fallback_iot_telemetry (asset_id, temperature, vibration, humidity, status) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO u_iot_sensor (u_airport_id, asset_id, temperature, vibration, humidity, status) VALUES ('SJC-01', ?, ?, ?, ?, ?)",
             (asset_id, temp, vib, hum, status),
         )
         conn.commit()
@@ -364,7 +390,7 @@ def db_get_telemetry(asset_id: str, limit: int = 10) -> list[dict]:
     conn = get_connection()
     try:
         rows = conn.execute(
-            "SELECT * FROM fallback_iot_telemetry WHERE asset_id = ? ORDER BY timestamp DESC LIMIT ?",
+            "SELECT * FROM u_iot_sensor WHERE asset_id = ? ORDER BY timestamp DESC LIMIT ?",
             (asset_id, limit),
         ).fetchall()
         return [dict(r) for r in rows]

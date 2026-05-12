@@ -31,37 +31,30 @@ Modern airports face critical operational bottlenecks due to:
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Enterprise Architecture & Flows
 
+The architecture is designed for high availability, offline resilience, and seamless CMDB integration.
+
+```mermaid
+graph TD
+    A[Passenger Web App] -->|HTTPS POST| B(FastAPI Backend)
+    C[React Native Mobile] -->|Offline Sync / HTTPS| B
+    B <-->|WebSocket| C
+    B <-->|REST API| D{ServiceNow CMDB}
+    B <-->|LLM API| E[Groq AI Triage]
+    B -->|SMTP / WAHA| F[Notifications]
+    B <-->|SQLite Fallback| G[(Local Storage)]
+    H[IoT Sensors] -->|Telemetry POST| B
 ```
-┌─────────────────────┐     QR Scan     ┌──────────────────────┐
-│  Passenger Web App  │ ──────────────▶ │   Passenger Reports  │
-│   (Vite + React)    │                 │   /report-issue      │
-└─────────────────────┘                 └──────────┬───────────┘
-                                                   │ POST
-                                        ┌──────────▼───────────┐
-                                        │   FastAPI Backend    │
-                                        │   (Python + Groq)    │
-                                        │                      │
-                                        │  ┌─────────────────┐ │
-                                        │  │  AI Triage LLM  │ │
-                                        │  │  (Groq / Llama) │ │
-                                        │  └────────┬────────┘ │
-                                        └───────────┼──────────┘
-                                                    │
-                              ┌─────────────────────▼──────────────────────┐
-                              │              ServiceNow Instance            │
-                              │  Incident Table → assigned [Electrical/     │
-                              │  Plumbing/Security/Facilities/IT/HR]        │
-                              └─────────────────────────────────────────────┘
-                                                    │
-                              ┌─────────────────────▼──────────────────────┐
-                              │           Staff Mobile App                  │
-                              │        (React Native + Expo)               │
-                              │  Security | Electrician | Plumber |         │
-                              │  Help Staff | Facilities | Manager          │
-                              └────────────────────────────────────────────┘
-```
+
+### Flow Definitions
+1. **IoT Anomaly Detection**: `POST /telemetry` receives sensor data -> AI evaluates Z-score/thresholds -> If anomalous, auto-creates high-priority incident.
+2. **Offline Mobile Sync**: Technicians complete tasks offline -> Stored in React Native `AsyncStorage` -> Background sync fires when `NetInfo` detects connection.
+3. **Multi-Tenant Routing**: `airport_id` parameter partitions data across SJC, JFK, DXB instances seamlessly.
+4. **CMDB Mapping**:
+   - `u_airport_asset` (Master CI)
+   - `u_iot_sensor`, `u_terminal`, `u_hvac_system` (Child CIs)
+   - `u_preventive_task` (Scheduled Jobs)
 
 ---
 
@@ -295,10 +288,23 @@ Full interactive docs: `http://localhost:8000/docs`
 
 ---
 
-## 🔒 Production Deployment
+## 🔒 Production Deployment & Scalability
+
+**Scalability Rationale**:
+- **Stateless API**: FastAPI runs asynchronously without holding session state, allowing horizontal scaling behind load balancers.
+- **WebSocket Broadcasting**: Dedicated WebSocket manager enables real-time distribution of IoT alerts without HTTP polling overhead.
+- **Resilient Fallback DB**: In case of ServiceNow latency/downtime, the local SQLite database maintains operational continuity (100% SLA target).
+- **OTA Ready**: The Expo app uses `fallbackToCacheTimeout: 0` for seamless Over-The-Air updates without app store delays.
+
+### Docker Setup
+For full enterprise deployment:
+```bash
+docker-compose up -d --build
+```
+*(Includes FastAPI, WAHA WhatsApp client, and Reverse Proxy)*
 
 ### Backend
-- Deploy to **Railway**, **Render**, **Fly.io**, or any VPS
+- Deploy to **Railway**, **Render**, **AWS ECS**, or any VPS
 - Set all environment variables in the hosting platform
 - Use `uvicorn main:app --host 0.0.0.0 --port 8000` (no `--reload`)
 

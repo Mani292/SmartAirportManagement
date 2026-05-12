@@ -14,8 +14,8 @@ class TelemetryData(BaseModel):
     vibration: float
     humidity: Optional[float] = 40.0
 
-@router.post("/sensor-data")
-async def receive_sensor_data(data: TelemetryData):
+@router.post("/telemetry")
+async def receive_telemetry(data: TelemetryData):
     """
     Ingest IoT sensor data, log it, and trigger AI anomaly detection.
     If an anomaly is found, it automatically creates a high-priority incident.

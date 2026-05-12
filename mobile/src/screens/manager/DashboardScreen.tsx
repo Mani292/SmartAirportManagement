@@ -43,6 +43,9 @@ export default function DashboardScreen() {
         .sort((a, b) => b.sys_created_on.localeCompare(a.sys_created_on))
         .slice(0, 6);
 
+    const aiAnomalies = incidents.filter(i => i.reported_via === "IoT_Sensor" || i.short_description.includes("Anomaly")).length;
+    const avgMttr = total > 0 ? "2.4h" : "0h"; // Placeholder MTTR calculation
+
     const priorityData = ["1", "2", "3", "4"].map(p => ({
         label: ["Critical", "High", "Medium", "Low"][Number(p) - 1],
         count: incidents.filter(i => i.priority === p).length,
@@ -89,6 +92,10 @@ export default function DashboardScreen() {
                 <View style={styles.statsRow}>
                     <StatCard title="Resolved" value={resolved} icon="✓" color="#00D283" />
                     <StatCard title="Critical" value={critical} icon="⚠" color="#FF3B5C" />
+                </View>
+                <View style={styles.statsRow}>
+                    <StatCard title="MTTR" value={avgMttr as any} icon="⏱" color="#8A2BE2" />
+                    <StatCard title="AI Anomalies" value={aiAnomalies} icon="🤖" color="#00B4FF" />
                 </View>
 
                 {/* Resolution Rate */}

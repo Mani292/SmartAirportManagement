@@ -22,7 +22,7 @@ class QRCreate(BaseModel):
 @router.post("/generate")
 async def generate_qr(data: QRCreate, user: dict = Depends(RoleChecker(["admin", "manager"]))):
     """Generate a QR code PNG that routes passengers to the passenger portal."""
-    base_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    base_url = os.getenv("FRONTEND_URL", "https://smart-airport.vercel.app")
     url = (
         f"{base_url}/"
         f"?location={data.terminal}&area={data.area}&code={data.location_code}"

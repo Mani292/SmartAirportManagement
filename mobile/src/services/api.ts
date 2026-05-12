@@ -1,5 +1,8 @@
 import axios from "axios";
 import { Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+// @ts-ignore
+import NetInfo from "@react-native-community/netinfo";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 export interface IncidentData {
@@ -43,13 +46,13 @@ const getBaseUrl = () => {
     if (process.env.EXPO_PUBLIC_API_URL) {
         return process.env.EXPO_PUBLIC_API_URL;
     }
-    if (Platform.OS === "android") {
-        return "http://10.0.2.2:8000/api/v1"; 
+    // Only use localhosts in development
+    if (__DEV__) {
+        if (Platform.OS === "android") return "http://10.0.2.2:8000/api/v1"; 
+        return "http://localhost:8000/api/v1";
     }
-    if (Platform.OS === "web") {
-        return "http://localhost:8000/api/v1"; 
-    }
-    return "http://localhost:8000/api/v1";
+    // Enterprise production fallback
+    return "https://api.smartairport.app/v1";
 };
 
 const BASE_URL = getBaseUrl();
@@ -113,8 +116,42 @@ export const getIncident = (sysId: string) =>
 export const trackIncident = (number: string) =>
     api.get(`/incidents/track/${number}`);
 
-export const createIncident = (data: IncidentData) =>
-    api.post("/incidents/", data);
+// --- Offline-capable createIncident ---
+export const createIncident = async (data: IncidentData) => {
+    try {
+        const netState = await NetInfo.fetch();
+        if (!netState.isConnected) {
+            // Queue offline
+            const queueStr = await AsyncStorage.getItem("pending_incidents");
+            const queue = queueStr ? JSON.parse(queueStr) : [];
+            queue.push(data);
+            await AsyncStorage.setItem("pending_incidents", JSON.stringify(queue));
+            return { data: { success: true, offline: true, message: "Saved offline. Will sync when connected." } };
+        }
+        return await api.post("/incidents/", data);
+    } catch (error) {
+        // Fallback if netinfo fails
+        return api.post("/incidents/", data);
+    }
+};
+
+// Background sync function (call from App.tsx or similar on network return)
+export const syncOfflineIncidents = async () => {
+    try {
+        const queueStr = await AsyncStorage.getItem("pending_incidents");
+        if (queueStr) {
+            const queue = JSON.parse(queueStr);
+            if (queue.length > 0) {
+                for (const data of queue) {
+                    await api.post("/incidents/", data);
+                }
+                await AsyncStorage.removeItem("pending_incidents");
+            }
+        }
+    } catch (e) {
+        console.error("Offline sync error", e);
+    }
+};
 
 export const updateIncident = (sysId: string, data: Partial<IncidentData> & { state?: string; work_notes?: string; close_notes?: string }) =>
     api.patch(`/incidents/${sysId}`, data);
