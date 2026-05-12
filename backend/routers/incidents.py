@@ -1,3 +1,14 @@
+"""
+incidents.py — Airport incident lifecycle management router.
+
+Problem Statement Integration:
+    - Passengers scan QR codes → report issues via Web Portal → AI triages to correct team.
+    - IoT sensors → automatic incident creation via anomaly detection.
+    - Staff resolve via Mobile App → passenger notified via WhatsApp/Email.
+    - All actions logged in audit trail for accountability.
+"""
+
+from __future__ import annotations
 from typing import Optional
 
 import llm
@@ -7,7 +18,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi.concurrency import run_in_threadpool
 from routers.auth import get_current_user
 from security.rbac import RoleChecker
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from whatsapp import send_confirmation, send_resolution
 from logger.audit import log_audit
 from datetime import datetime, timedelta
@@ -16,13 +27,15 @@ router = APIRouter()
 
 
 class IncidentCreate(BaseModel):
-    short_description: str
-    location: str
-    area: str
-    department: str = "Facilities"
-    reported_via: str = "App"
-    reporter_phone: Optional[str] = ""
-    reporter_email: Optional[str] = ""
+    """Payload for creating a new airport incident (from passenger, IoT, or staff)."""
+    short_description: str = Field(..., min_length=5, max_length=1000, description="Brief description of the issue")
+    location: str = Field(..., description="Physical location, e.g. 'Terminal 1'")
+    area: str = Field(..., description="Sub-location, e.g. 'Gate A3'")
+    department: str = Field(default="Facilities", description="Reporting department")
+    reported_via: str = Field(default="App", description="Channel: App | QR | IoT_Sensor | WhatsApp")
+    reporter_name: Optional[str] = Field(default="", description="Passenger or staff name")
+    reporter_phone: Optional[str] = Field(default="", description="Phone for WhatsApp notification")
+    reporter_email: Optional[str] = Field(default="", description="Email for confirmation")
 
 
 class IncidentUpdate(BaseModel):
@@ -100,8 +113,13 @@ async def create_incident(data: IncidentCreate):
             f"  Recommended Action: {triage['recommended_action']}\n\n"
             f"📍 Location: {data.location} — {data.area}\n"
             f"📱 Reported via: {data.reported_via}\n"
+            f"👤 Reporter: {data.reporter_name or 'Anonymous'}\n"
             f"📞 Reporter Phone: {data.reporter_phone or 'N/A'}\n"
-            f"📧 Reporter Email: {data.reporter_email or 'N/A'}"
+            f"📧 Reporter Email: {data.reporter_email or 'N/A'}\n"
+            + (
+                "\n🚁 DRONE DISPATCH: Autonomous drone will perform initial visual verification."
+                if triage.get("assigned_team") == "Drone Fleet" else ""
+            )
         )
 
         payload = {

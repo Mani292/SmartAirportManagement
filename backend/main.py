@@ -28,9 +28,19 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Smart Airport Management API",
-    description="AI-Powered Airport Operations Platform — FastAPI backend with ServiceNow, Groq AI triage, WhatsApp/Email notifications, and SQLite fallback persistence.",
+    description=(
+        "**Enterprise-Grade AI-Powered Airport Operations Platform.**\n\n"
+        "Integrates **ServiceNow CMDB**, **Groq LLM** triage, **IoT anomaly detection**, "
+        "WhatsApp/Email notifications, and an offline-capable React Native mobile app.\n\n"
+        "**Problem Statement**: Airports suffer from inefficient manual triage, "
+        "reactive maintenance, and disconnected field staff. This system bridges "
+        "passengers, IoT sensors, and field technicians via an AI-orchestrated, "
+        "mobile-first, multi-tenant airport operations ecosystem."
+    ),
     version="2.1.0",
     lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
 
 # ── Rate Limit Handler ────────────────────────────────────────────────────────
@@ -57,14 +67,26 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://localhost:5173",
-        "http://localhost:8081", # Metro bundler
-        "http://localhost:19006", # Expo web
-        "https://smart-airport.vercel.app", # Placeholder prod URL
+        "http://localhost:8081",   # Metro bundler
+        "http://localhost:19006",  # Expo web
+        "https://smart-airport.vercel.app",
+        os.getenv("FRONTEND_URL", ""),  # Production frontend
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    """Append enterprise security headers to every response."""
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
 
 # ── API Versioning (v1) ────────────────────────────────────────────────────────
 API_V1 = "/api/v1"
@@ -87,13 +109,15 @@ def root():
     return {
         "app": "Smart Airport Management",
         "status": "running",
-        "version": "2.0.0",
+        "version": "2.1.0",
         "docs": "/docs",
-        "auth": "JWT Bearer — POST /api/auth/login",
+        "redoc": "/redoc",
+        "auth": "JWT Bearer — POST /api/v1/auth/login",
+        "problem_statement": "Bridging passengers, IoT sensors, and field staff via AI-orchestrated airport ops.",
     }
 
 
 @app.get("/health")
 def health():
     """Health check endpoint for load balancers and uptime monitors."""
-    return {"status": "healthy", "service": "smart-airport-api", "version": "2.0.0"}
+    return {"status": "healthy", "service": "smart-airport-api", "version": "2.1.0"}

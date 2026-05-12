@@ -1,27 +1,38 @@
-# Required for ServiceNow integration and environment variable loading
-requests
-python-dotenv
-# Required for ServiceNow API and environment variable loading
-requests
-python-dotenv
-# Required for QR code generation
-qrcode
-# Required for LLM integration
-groq
-# Required for JWT authentication
-python-jose
-# Required for password hashing
-passlib
+# ─── Smart Airport Management — Backend Requirements ──────────────────────────
+# All packages pinned to minimum compatible versions for reproducibility.
+
+# Web Framework
 fastapi>=0.111.0
 uvicorn[standard]>=0.29.0
+
+# Async HTTP (ServiceNow, external APIs)
+httpx>=0.27.0
+
+# Environment Variables
 python-dotenv>=1.0.1
-requests>=2.31.0
-groq>=0.9.0
-qrcode[pil]>=7.4.2
-pillow>=10.3.0
+
+# Data Validation
 pydantic>=2.7.1
 email-validator>=2.1.1
+
+# AI / LLM
+groq>=0.9.0
+
+# Auth & Security
 python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
+
+# Rate Limiting
+slowapi>=0.1.9
+
+# QR Code Generation
+qrcode[pil]>=7.4.2
+pillow>=10.3.0
+
+# ServiceNow (REST fallback requests)
+requests>=2.31.0
+
+# Testing
 pytest>=8.2.0
+pytest-asyncio>=0.23.6
 httpx>=0.27.0
