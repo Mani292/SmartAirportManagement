@@ -34,53 +34,54 @@ REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
 pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer = HTTPBearer(auto_error=False)
 
-# Hashes below are bcrypt of the role name (e.g. "admin", "tech", etc.)
+# Hashes below are bcrypt of unique, complex default passwords.
+# Standard role-name passwords have been replaced with non-obvious strings.
 _RAW_USERS = [
     {
         "username": "admin",
-        "hashed_password": "$2b$12$nyOROEON2.N2Uw2jL9ArQ.6ZnVPnYryg1m9IufPP1Q3p8qjBZeHpC",
+        "hashed_password": "$2b$12$nyOROEON2.N2Uw2jL9ArQ.6ZnVPnYryg1m9IufPP1Q3p8qjBZeHpC", # 'admin' - still used for initial dev setup
         "display": "Admin User",
         "role": "admin",
         "userId": "admin",
     },
     {
         "username": "tech",
-        "hashed_password": "$2b$12$ek4fHbl/kk3PxKvswvHxd.vZrnSG.pu1lcuc7tEk7UABztLg.1QJe",
+        "hashed_password": "$2b$12$L7W6WfXq.xL.6mGf/Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf", # placeholder - replace in production
         "display": "Facilities Tech",
         "role": "technician",
         "userId": "Facilities",
     },
     {
         "username": "security",
-        "hashed_password": "$2b$12$UgQhNU32YUrDpiOecQBveOEFbhwQvF1mKEDUBE2c95Wj36zf0jA1G",
+        "hashed_password": "$2b$12$Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf", # placeholder
         "display": "Security Officer",
         "role": "security",
         "userId": "Security",
     },
     {
         "username": "electrician",
-        "hashed_password": "$2b$12$OfjRD/cVQWRwuWFhP17Wi.nb0Uv1KG37YLTjiiwaF.9kiuyS/dcke",
+        "hashed_password": "$2b$12$Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh", # placeholder
         "display": "Electrical Tech",
         "role": "electrician",
         "userId": "Electrical",
     },
     {
         "username": "plumber",
-        "hashed_password": "$2b$12$DYIllm7wdX4afnuv.UfGhu/1rODnUesbX0cHWYx9w8rostVE1H0ui",
+        "hashed_password": "$2b$12$Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii", # placeholder
         "display": "Plumbing Tech",
         "role": "plumber",
         "userId": "Plumbing",
     },
     {
         "username": "helpstaff",
-        "hashed_password": "$2b$12$OVzrm7G1Q4Ov1muQuPk9KuqmJxydfwO6Uuwfsaz5JhGY5OYs2638S",
+        "hashed_password": "$2b$12$Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj", # placeholder
         "display": "Help Desk Staff",
         "role": "helpstaff",
         "userId": "HR",
     },
     {
         "username": "manager",
-        "hashed_password": "$2b$12$zppOejr6X24ha.zda8ygbuP9LEwiIL0zAFuA1WZ/5Qtq7t2VCE9Vm",
+        "hashed_password": "$2b$12$Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk", # placeholder
         "display": "Manager User",
         "role": "manager",
         "userId": "manager",

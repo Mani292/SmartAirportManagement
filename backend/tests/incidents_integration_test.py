@@ -1,11 +1,11 @@
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 from backend.main import app
 
 client = TestClient(app)
 
-@patch("backend.routers.incidents.run_in_threadpool")
+@patch("backend.routers.incidents.run_in_threadpool", new_callable=AsyncMock)
 def test_create_incident_integration(mock_run):
     # Mock return values for AI Triage and ServiceNow creation
     mock_triage = {
@@ -45,10 +45,9 @@ def test_create_incident_integration(mock_run):
 
 @patch("backend.routers.iot.detect_anomaly")
 @patch("backend.routers.iot.db_log_telemetry")
-@patch("backend.routers.iot.create_incident")
+@patch("backend.routers.iot.create_incident", new_callable=AsyncMock)
 def test_iot_anomaly_trigger_incident(mock_create_inc, mock_log, mock_detect):
     mock_detect.return_value = "OVERHEATING"
-    mock_create_inc.return_value = MagicMock() # It's async but TestClient handles it
 
     payload = {
         "asset_id": "ASSET123",
