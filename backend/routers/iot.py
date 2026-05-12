@@ -20,7 +20,9 @@ async def receive_sensor_data(data: TelemetryData):
     Ingest IoT sensor data, log it, and trigger AI anomaly detection.
     If an anomaly is found, it automatically creates a high-priority incident.
     """
-    anomaly = detect_anomaly(data.temperature, data.vibration)
+    # Fetch recent history for statistical AI analysis
+    history = db_get_telemetry(data.asset_id, limit=20)
+    anomaly = detect_anomaly(data.temperature, data.vibration, history)
     status = "NORMAL" if not anomaly else "ANOMALY"
     
     # Log to fallback DB

@@ -4,6 +4,19 @@ An AI-powered, full-stack airport operations platform that lets passengers repor
 
 ---
 
+## 📄 Problem Statement
+
+Modern airports face critical operational bottlenecks due to:
+1.  **Inefficient Manual Triage**: High latency in dispatching technical teams to facility failures.
+2.  **Inaccessible Legacy Systems**: Maintenance software is often desktop-bound, leaving field staff disconnected.
+3.  **Communication Silos**: Passengers have no real-time way to report issues or track their resolution.
+4.  **Reactive Maintenance**: Relying on failure reports rather than sensor-driven predictive insights.
+5.  **Poor Accountability**: Lack of verifiable audit trails for critical safety and security incidents.
+
+**Smart Airport Management** solves these by bridging passengers, IoT sensors, and field staff via an AI-orchestrated, mobile-first ecosystem.
+
+---
+
 ## 🎯 Core Enterprise Features
 
 | Feature | Details |

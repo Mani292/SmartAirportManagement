@@ -1,24 +1,54 @@
 import axios from "axios";
 import { Platform } from "react-native";
 
+// ── Types ──────────────────────────────────────────────────────────────────
+export interface IncidentData {
+    short_description: string;
+    location: string;
+    area: string;
+    department?: string;
+    reported_via?: string;
+    reporter_phone?: string;
+    reporter_email?: string;
+}
+
+export interface AssetData {
+    name: string;
+    asset_type: string;
+    location: string;
+    area: string;
+    status?: string;
+}
+
+export interface PreventiveTaskData {
+    asset_id: string;
+    task_description: string;
+    frequency: string;
+    next_due?: string;
+}
+
+export interface ChatMessage {
+    role: "user" | "assistant" | "system";
+    content: string;
+}
+
+export interface QRData {
+    terminal: string;
+    area: string;
+    location_code: string;
+}
+
 // ── API Configuration ──────────────────────────────────────────────────────
-// For local development on a physical device, set your machine's local IP.
-// For production, point this to your deployed backend URL.
-// Android emulator must use 10.0.2.2 instead of 127.0.0.1/localhost.
 const getBaseUrl = () => {
-    // Priority 1: Environment variable (recommended for prod and local dev)
     if (process.env.EXPO_PUBLIC_API_URL) {
         return process.env.EXPO_PUBLIC_API_URL;
     }
-
-    // Fallback logic for local development if .env is missing
     if (Platform.OS === "android") {
-        return "http://10.0.2.2:8000/api/v1"; // Android emulator
+        return "http://10.0.2.2:8000/api/v1"; 
     }
     if (Platform.OS === "web") {
-        return "http://localhost:8000/api/v1"; // Browser web build
+        return "http://localhost:8000/api/v1"; 
     }
-    // Default fallback
     return "http://localhost:8000/api/v1";
 };
 
@@ -33,11 +63,8 @@ const api = axios.create({
 });
 
 // ── JWT Token Injection ────────────────────────────────────────────────────
-// The store is imported lazily to avoid circular dependency issues.
-// Every outgoing request automatically receives the current access token.
 api.interceptors.request.use((config) => {
     try {
-        // Lazy import to avoid circular deps with store
         const { store } = require("../store");
         const token: string = store.getState().auth.accessToken;
         if (token) {
@@ -45,19 +72,19 @@ api.interceptors.request.use((config) => {
             config.headers["Authorization"] = `Bearer ${token}`;
         }
     } catch {
-        // Store not yet initialized — skip token injection
+        // Store not yet initialized
     }
     return config;
 });
 
-// ── Global response interceptor for error logging ──────────────────────────
+// ── Interceptors ───────────────────────────────────────────────────────────
 api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response) {
             console.error(`[API Error] ${error.config?.url} → ${error.response.status}:`, error.response.data);
         } else if (error.request) {
-            console.error("[API Error] No response received. Is the backend running?", error.message);
+            console.error("[API Error] No response received.", error.message);
         }
         return Promise.reject(error);
     }
@@ -86,10 +113,10 @@ export const getIncident = (sysId: string) =>
 export const trackIncident = (number: string) =>
     api.get(`/incidents/track/${number}`);
 
-export const createIncident = (data: any) =>
+export const createIncident = (data: IncidentData) =>
     api.post("/incidents/", data);
 
-export const updateIncident = (sysId: string, data: any) =>
+export const updateIncident = (sysId: string, data: Partial<IncidentData> & { state?: string; work_notes?: string; close_notes?: string }) =>
     api.patch(`/incidents/${sysId}`, data);
 
 export const rateIncident = (sysId: string, rating: number, comment = "") =>
@@ -99,20 +126,20 @@ export const rateIncident = (sysId: string, rating: number, comment = "") =>
 export const getAssets = () =>
     api.get("/assets/");
 
-export const createAsset = (data: any) =>
+export const createAsset = (data: AssetData) =>
     api.post("/assets/", data);
 
-export const updateAsset = (sysId: string, data: any) =>
+export const updateAsset = (sysId: string, data: Partial<AssetData>) =>
     api.patch(`/assets/${sysId}`, data);
 
 // ── PREVENTIVE ──
 export const getPreventiveTasks = () =>
     api.get("/preventive/");
 
-export const createPreventiveTask = (data: any) =>
+export const createPreventiveTask = (data: PreventiveTaskData) =>
     api.post("/preventive/", data);
 
-export const updatePreventiveTask = (sysId: string, data: any) =>
+export const updatePreventiveTask = (sysId: string, data: Partial<PreventiveTaskData>) =>
     api.patch(`/preventive/${sysId}`, data);
 
 // ── TECHNICIAN ──
@@ -123,7 +150,7 @@ export const getMyStats = (assignedTo: string) =>
     api.get(`/technician/stats/${assignedTo}`);
 
 // ── AI ──
-export const chatWithPassenger = (message: string, history: any[]) =>
+export const chatWithPassenger = (message: string, history: ChatMessage[]) =>
     api.post("/ai/chat", { message, history });
 
 export const askKB = (question: string, asset: string, issue: string) =>
@@ -133,7 +160,7 @@ export const summarizeResolution = (description: string, notes: string) =>
     api.post("/ai/summarize", { description, notes });
 
 // ── QR ──
-export const generateQR = (data: any) =>
+export const generateQR = (data: QRData) =>
     api.post("/qr/generate", data);
 
 export const getQRLocations = () =>

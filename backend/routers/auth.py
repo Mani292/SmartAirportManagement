@@ -97,6 +97,7 @@ for _u in _RAW_USERS:
         "role": _u["role"],
         "userId": _u["userId"],
         "hashed_password": _u["hashed_password"],
+        "must_change_password": True, # Force change for default accounts
     }
 
 
@@ -111,10 +112,33 @@ def _verify(plain: str, hashed: str) -> bool:
         return False
 
 
-def generate_secure_password(length: int = 12) -> str:
-    """Generate a secure random password."""
+def generate_secure_password(length: int = 14) -> str:
+    """Generate a secure random password satisfying complexity rules."""
+    # Ensure at least one of each required type
+    password = [
+        secrets.choice(string.ascii_uppercase),
+        secrets.choice(string.ascii_lowercase),
+        secrets.choice(string.digits),
+        secrets.choice("!@#$%^&*")
+    ]
     alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
-    return "".join(secrets.choice(alphabet) for _ in range(length))
+    password += [secrets.choice(alphabet) for _ in range(length - 4)]
+    secrets.SystemRandom().shuffle(password)
+    return "".join(password)
+
+
+def validate_password_complexity(password: str):
+    """Enforce enterprise password complexity rules."""
+    if len(password) < 10:
+        raise HTTPException(status_code=400, detail="Password must be at least 10 characters long")
+    if not any(c.isupper() for c in password):
+        raise HTTPException(status_code=400, detail="Password must contain at least one uppercase letter")
+    if not any(c.islower() for c in password):
+        raise HTTPException(status_code=400, detail="Password must contain at least one lowercase letter")
+    if not any(c.isdigit() for c in password):
+        raise HTTPException(status_code=400, detail="Password must contain at least one digit")
+    if not any(c in "!@#$%^&*" for c in password):
+        raise HTTPException(status_code=400, detail="Password must contain at least one special character (!@#$%^&*)")
 
 
 def _create_token(data: dict, expires_delta: timedelta) -> str:
@@ -179,11 +203,10 @@ class LoginRequest(BaseModel):
 
 
 class TokenResponse(BaseModel):
-    success: bool = True
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
-    expires_in: int = ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    must_change_password: bool = False
     username: str
     display_name: str
     role: str
@@ -204,16 +227,16 @@ async def login(req: LoginRequest):
     user = USERS.get(uname)
 
     if user and _verify(req.password, user["hashed_password"]):
-        access = _create_access_token(uname, user["role"], user["userId"])
-        refresh = _create_refresh_token(uname)
-        return TokenResponse(
-            access_token=access,
-            refresh_token=refresh,
-            username=uname,
-            display_name=user["display"],
-            role=user["role"],
-            userId=user["userId"],
-        )
+        return {
+            "access_token": _create_access_token(uname, user["role"], user["userId"]),
+            "refresh_token": _create_refresh_token(uname),
+            "token_type": "bearer",
+            "must_change_password": user.get("must_change_password", False),
+            "username": uname,
+            "display_name": user["display"],
+            "role": user["role"],
+            "userId": user["userId"],
+        }
 
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -243,6 +266,28 @@ async def refresh_token(req: RefreshRequest):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired refresh token",
         )
+
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str
+
+
+@router.post("/change-password")
+async def change_password(req: ChangePasswordRequest, user: dict = Depends(get_current_user)):
+    """Allow users to change their password, enforcing complexity rules."""
+    uname = user["username"]
+    stored_user = USERS[uname]
+    
+    if not _verify(req.old_password, stored_user["hashed_password"]):
+        raise HTTPException(status_code=401, detail="Incorrect current password")
+    
+    validate_password_complexity(req.new_password)
+    
+    stored_user["hashed_password"] = pwd_ctx.hash(req.new_password)
+    stored_user["must_change_password"] = False
+    
+    return {"success": True, "message": "Password updated successfully"}
 
 
 @router.get("/me")

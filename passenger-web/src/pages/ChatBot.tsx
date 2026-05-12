@@ -57,7 +57,7 @@ export default function ChatBot() {
         </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ width: 40, height: 40, borderRadius: 'var(--radius-full)', background: 'var(--color-primary-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-             <Sparkles color="var(--color-primary)" size={20} />
+            <Sparkles color="var(--color-primary)" size={20} />
           </div>
           <div>
             <h1 className="brand-text" style={{ fontSize: '1.25rem' }}>AeroBot</h1>
@@ -72,7 +72,7 @@ export default function ChatBot() {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
           {QUICK_PROMPTS.map(q => (
             <div key={q} onClick={() => send(q)} style={{
-              background: 'var(--color-bg-elevated)', padding: '8px 12px', borderRadius: 'var(--radius-full)', 
+              background: 'var(--color-bg-elevated)', padding: '8px 12px', borderRadius: 'var(--radius-full)',
               fontSize: '0.8rem', color: 'var(--color-text-secondary)', cursor: 'pointer', border: '1px solid var(--color-border)'
             }}>
               {q}
@@ -102,30 +102,30 @@ export default function ChatBot() {
             </div>
           ))}
           {loading && (
-             <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end' }}>
-                <div style={{ width: 28, height: 28, borderRadius: 14, background: 'var(--color-primary-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Sparkles size={14} color="var(--color-primary)" />
-                </div>
-                <div style={{ background: 'var(--color-bg-card)', padding: '12px 16px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', borderBottomLeftRadius: 4 }}>
-                   <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Thinking...</p>
-                </div>
-             </div>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end' }}>
+              <div style={{ width: 28, height: 28, borderRadius: 14, background: 'var(--color-primary-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Sparkles size={14} color="var(--color-primary)" />
+              </div>
+              <div style={{ background: 'var(--color-bg-card)', padding: '12px 16px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', borderBottomLeftRadius: 4 }}>
+                <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Thinking...</p>
+              </div>
+            </div>
           )}
           <div ref={bottomRef} />
         </div>
       </main>
 
       <footer style={{ padding: 16, background: 'var(--color-bg-card)', borderTop: '1px solid var(--color-border)', display: 'flex', gap: 12 }}>
-        <input 
+        <input
           type="text" className="glass-input" style={{ flex: 1 }}
           placeholder="Describe the issue..."
           value={input} onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && send()}
         />
-        <button 
+        <button
           onClick={() => send()} disabled={!input.trim() || loading}
-          style={{ 
-            width: 50, height: 50, borderRadius: 25, background: 'var(--color-primary)', 
+          style={{
+            width: 50, height: 50, borderRadius: 25, background: 'var(--color-primary)',
             border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
             opacity: (!input.trim() || loading) ? 0.5 : 1, cursor: 'pointer'
           }}
