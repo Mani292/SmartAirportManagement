@@ -27,12 +27,7 @@
       "favicon": "./assets/favicon.png"
     },
     "updates": {
-      "url": "https://u.expo.dev/f1a2b3c4-d5e6-4f7g-8h9i-j0k1l2m3n4o5",
-      "enabled": true,
-      "fallbackToCacheTimeout": 0
-    },
-    "runtimeVersion": {
-      "policy": "appVersion"
+      "enabled": true
     }
   }
 }

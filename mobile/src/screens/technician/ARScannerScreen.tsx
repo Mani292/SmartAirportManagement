@@ -8,7 +8,7 @@ Workflow:
      and GET /api/v1/iot/predict/{asset_id} for live health + prediction.
   4. An AR overlay displays real-time health, MTTR, and AI repair guidance.
   5. Technician can create an incident directly from the scanner if needed.
-"""
+*/
 import React, { useState, useEffect, useRef } from "react";
 import {
     View, Text, StyleSheet, TouchableOpacity,
@@ -60,7 +60,7 @@ export default function ARScannerScreen() {
 
         try {
             // Fetch the first seeded asset as the "scanned" asset
-            const assetsRes = await api.get("/assets/");
+            const assetsRes = await axiosApi.get("/assets/");
             const assetList: AssetDetail[] = assetsRes.data?.result || [];
 
             if (!assetList.length) {
@@ -72,7 +72,7 @@ export default function ARScannerScreen() {
 
             // Fetch real predictive maintenance data
             try {
-                const predRes = await api.get(`/iot/predict/${scannedAsset.sys_id}`);
+                const predRes = await axiosApi.get(`/iot/predict/${scannedAsset.sys_id}`);
                 setPrediction(predRes.data);
             } catch {
                 // Prediction unavailable — show asset data only

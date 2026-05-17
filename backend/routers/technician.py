@@ -1,25 +1,22 @@
 import servicenow as sn
-from fastapi import APIRouter, Depends
-from routers.auth import get_current_user
+from fastapi import APIRouter
 from routers.incidents import cleanup_snow_record
-from logger.audit import log_audit
 
 router = APIRouter()
 
 
 @router.get("/tasks/{assigned_to}")
-async def get_my_tasks(assigned_to: str, user: dict = Depends(get_current_user)):
+def get_my_tasks(assigned_to: str):
     query = f"assigned_to={assigned_to}^state!=6^state!=7"
-    res = await sn.get_incidents(query=query)
-    log_audit(user["username"], "GET_TASKS", f"Target: {assigned_to}")
+    res = sn.get_incidents(query=query)
     if "result" in res and isinstance(res["result"], list):
         res["result"] = [cleanup_snow_record(r) for r in res["result"]]
     return res
 
 
 @router.get("/stats/{assigned_to}")
-async def get_my_stats(assigned_to: str, user: dict = Depends(get_current_user)):
-    all_tasks = await sn.get_incidents(query=f"assigned_to={assigned_to}", limit=100)
+def get_my_stats(assigned_to: str):
+    all_tasks = sn.get_incidents(query=f"assigned_to={assigned_to}", limit=100)
     if "result" in all_tasks and isinstance(all_tasks["result"], list):
         all_tasks["result"] = [cleanup_snow_record(r) for r in all_tasks["result"]]
     incidents = all_tasks.get("result", [])

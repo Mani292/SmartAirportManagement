@@ -14,7 +14,6 @@ import LoginScreen from "../screens/auth/LoginScreen";
 import MyTasksScreen from "../screens/technician/MyTasksScreen";
 import TaskDetailScreen from "../screens/technician/TaskDetailScreen";
 import QRScannerScreen from "../screens/technician/QRScannerScreen";
-import ARScannerScreen from "../screens/technician/ARScannerScreen";
 
 // Manager
 import DashboardScreen from "../screens/manager/DashboardScreen";
@@ -53,7 +52,6 @@ function TechnicianStack() {
             <Stack.Screen name="MyTasks" component={MyTasksScreen} />
             <Stack.Screen name="TaskDetail" component={TaskDetailScreen} />
             <Stack.Screen name="QRScanner" component={QRScannerScreen} />
-            <Stack.Screen name="ARScanner" component={ARScannerScreen} />
         </Stack.Navigator>
     );
 }

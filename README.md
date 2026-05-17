@@ -4,57 +4,50 @@ An AI-powered, full-stack airport operations platform that lets passengers repor
 
 ---
 
-## 📄 Problem Statement
-
-Modern airports face critical operational bottlenecks due to:
-1.  **Inefficient Manual Triage**: High latency in dispatching technical teams to facility failures.
-2.  **Inaccessible Legacy Systems**: Maintenance software is often desktop-bound, leaving field staff disconnected.
-3.  **Communication Silos**: Passengers have no real-time way to report issues or track their resolution.
-4.  **Reactive Maintenance**: Relying on failure reports rather than sensor-driven predictive insights.
-5.  **Poor Accountability**: Lack of verifiable audit trails for critical safety and security incidents.
-
-**Smart Airport Management** solves these by bridging passengers, IoT sensors, and field staff via an AI-orchestrated, mobile-first ecosystem.
-
----
-
-## 🎯 Core Enterprise Features
+## 🎯 What It Does
 
 | Feature | Details |
 |---|---|
-| 🤖 **AI-Powered Triage** | Groq LLM automatically categorizes, prioritizes, and assigns incidents with estimated resolution times. |
-| 🛡️ **Enterprise Security** | JWT-based auth with bcrypt hashing, secure random credential dispatch, and centralized audit logging. |
-| ⚡ **Async Performance** | Fully asynchronous backend architecture (`FastAPI` + `httpx`) for high-concurrency airport operations. |
-| 📱 **Mobile-First Staff App** | Role-based dashboards for Security, Electrical, Plumbing, and Facilities teams. |
-| 🔔 **Omni-Channel Alerts** | Passenger and staff notifications via WhatsApp (WAHA) and professional Email (SMTP). |
-| 🏢 **Operational Metrics** | Management dashboard with real-time SLA tracking and airport health indicators. |
-| 🔐 **Request Access Flow** | Seamless onboarding for new staff with secure, multi-channel credential delivery. |
+| 📱 **Passenger Portal** | Scan a QR code → select problem type → submit issue → get incident number instantly |
+| 🤖 **AI Triage (AeroBot)** | Groq LLM automatically categorizes every issue and assigns it to the right team |
+| 📋 **Staff Mobile App** | Security, Electrician, Plumber, Help Staff — each see only their assigned tasks |
+| 🔔 **Instant Notifications** | Passengers receive WhatsApp + email confirmation with the ServiceNow incident number |
+| 🏢 **Manager Dashboard** | Real-time KPI overview — open/resolved/critical incidents, priority breakdown, resolution rate |
+| 🔐 **Request Access Flow** | New staff select their role and receive login credentials via email or WhatsApp |
 
 ---
 
-## 🏗️ Enterprise Architecture & Flows
+## 🏗️ Architecture
 
-The architecture is designed for high availability, offline resilience, and seamless CMDB integration.
-
-```mermaid
-graph TD
-    A[Passenger Web App] -->|HTTPS POST| B(FastAPI Backend)
-    C[React Native Mobile] -->|Offline Sync / HTTPS| B
-    B <-->|WebSocket| C
-    B <-->|REST API| D{ServiceNow CMDB}
-    B <-->|LLM API| E[Groq AI Triage]
-    B -->|SMTP / WAHA| F[Notifications]
-    B <-->|SQLite Fallback| G[(Local Storage)]
-    H[IoT Sensors] -->|Telemetry POST| B
 ```
-
-### Flow Definitions
-1. **IoT Anomaly Detection**: `POST /telemetry` receives sensor data -> AI evaluates Z-score/thresholds -> If anomalous, auto-creates high-priority incident.
-2. **Offline Mobile Sync**: Technicians complete tasks offline -> Stored in React Native `AsyncStorage` -> Background sync fires when `NetInfo` detects connection.
-3. **Multi-Tenant Routing**: `airport_id` parameter partitions data across SJC, JFK, DXB instances seamlessly.
-4. **CMDB Mapping**:
-   - `u_airport_asset` (Master CI)
-   - `u_iot_sensor`, `u_terminal`, `u_hvac_system` (Child CIs)
-   - `u_preventive_task` (Scheduled Jobs)
+┌─────────────────────┐     QR Scan     ┌──────────────────────┐
+│  Passenger Web App  │ ──────────────▶ │   Passenger Reports  │
+│   (Vite + React)    │                 │   /report-issue      │
+└─────────────────────┘                 └──────────┬───────────┘
+                                                   │ POST
+                                        ┌──────────▼───────────┐
+                                        │   FastAPI Backend    │
+                                        │   (Python + Groq)    │
+                                        │                      │
+                                        │  ┌─────────────────┐ │
+                                        │  │  AI Triage LLM  │ │
+                                        │  │  (Groq / Llama) │ │
+                                        │  └────────┬────────┘ │
+                                        └───────────┼──────────┘
+                                                    │
+                              ┌─────────────────────▼──────────────────────┐
+                              │              ServiceNow Instance            │
+                              │  Incident Table → assigned [Electrical/     │
+                              │  Plumbing/Security/Facilities/IT/HR]        │
+                              └─────────────────────────────────────────────┘
+                                                    │
+                              ┌─────────────────────▼──────────────────────┐
+                              │           Staff Mobile App                  │
+                              │        (React Native + Expo)               │
+                              │  Security | Electrician | Plumber |         │
+                              │  Help Staff | Facilities | Manager          │
+                              └────────────────────────────────────────────┘
+```
 
 ---
 
@@ -278,33 +271,20 @@ WAHA_API_KEY=your_key
 | PATCH | `/api/incidents/{sys_id}` | Update incident state |
 | GET | `/api/incidents/track/{number}` | Track by incident number |
 
-### Metrics & Monitoring
+### Technician
 | Method | Endpoint | Description |
 |---|---|---|
-| GET | `/api/v1/metrics/` | Operational KPIs & SLA Status |
-| GET | `/health` | System health check |
+| GET | `/api/technician/tasks/{assigned_to}` | Get assigned tasks |
+| GET | `/api/technician/stats/{assigned_to}` | Get personal stats |
 
 Full interactive docs: `http://localhost:8000/docs`
 
 ---
 
-## 🔒 Production Deployment & Scalability
-
-**Scalability Rationale**:
-- **Stateless API**: FastAPI runs asynchronously without holding session state, allowing horizontal scaling behind load balancers.
-- **WebSocket Broadcasting**: Dedicated WebSocket manager enables real-time distribution of IoT alerts without HTTP polling overhead.
-- **Resilient Fallback DB**: In case of ServiceNow latency/downtime, the local SQLite database maintains operational continuity (100% SLA target).
-- **OTA Ready**: The Expo app uses `fallbackToCacheTimeout: 0` for seamless Over-The-Air updates without app store delays.
-
-### Docker Setup
-For full enterprise deployment:
-```bash
-docker-compose up -d --build
-```
-*(Includes FastAPI, WAHA WhatsApp client, and Reverse Proxy)*
+## 🔒 Production Deployment
 
 ### Backend
-- Deploy to **Railway**, **Render**, **AWS ECS**, or any VPS
+- Deploy to **Railway**, **Render**, **Fly.io**, or any VPS
 - Set all environment variables in the hosting platform
 - Use `uvicorn main:app --host 0.0.0.0 --port 8000` (no `--reload`)
 
@@ -324,15 +304,15 @@ docker-compose up -d --build
 
 | Layer | Technology |
 |---|---|
-| **Backend API** | Python, FastAPI, Uvicorn (Fully Asynchronous) |
-| **Async Clients** | `httpx` (ServiceNow), `AsyncGroq` (AI) |
-| **AI Triage** | Groq (Llama 3.1 8B), Groq SDK |
-| **ITSM Platform** | ServiceNow REST API (v1 with Async Integration) |
+| **Backend API** | Python, FastAPI, Uvicorn |
+| **AI Triage** | Groq (Llama 3), Groq SDK |
+| **ITSM Platform** | ServiceNow REST API |
 | **Mobile App** | React Native, Expo, TypeScript |
 | **State Management** | Redux Toolkit |
 | **Passenger Portal** | Vite, React, TypeScript |
-| **Monitoring** | Centralized Audit Logging, Operational Metrics API |
-| **Design** | Glassmorphism, Outfit + Inter fonts |
+| **Email** | SMTP (Gmail) |
+| **WhatsApp** | WAHA (open-source API) |
+| **Design** | Glassmorphism dark theme, Outfit + Inter fonts |
 
 ---
 

@@ -1,41 +1,30 @@
-"""
-incidents.py — Airport incident lifecycle management router.
-
-Problem Statement Integration:
-    - Passengers scan QR codes → report issues via Web Portal → AI triages to correct team.
-    - IoT sensors → automatic incident creation via anomaly detection.
-    - Staff resolve via Mobile App → passenger notified via WhatsApp/Email.
-    - All actions logged in audit trail for accountability.
-"""
-
-from __future__ import annotations
 from typing import Optional
 
 import llm
 import servicenow as sn
 from email_service import send_task_assignment
 from fastapi import APIRouter, HTTPException, Depends
-from fastapi.concurrency import run_in_threadpool
-from routers.auth import get_current_user
-from security.rbac import RoleChecker
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from whatsapp import send_confirmation, send_resolution
-from logger.audit import log_audit
-from datetime import datetime, timedelta
+from routers.auth import get_current_user
+from security.rbac import require_role
+from fastapi import Request
 
 router = APIRouter()
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+limiter = Limiter(key_func=get_remote_address)
 
 
 class IncidentCreate(BaseModel):
-    """Payload for creating a new airport incident (from passenger, IoT, or staff)."""
-    short_description: str = Field(..., min_length=5, max_length=1000, description="Brief description of the issue")
-    location: str = Field(..., description="Physical location, e.g. 'Terminal 1'")
-    area: str = Field(..., description="Sub-location, e.g. 'Gate A3'")
-    department: str = Field(default="Facilities", description="Reporting department")
-    reported_via: str = Field(default="App", description="Channel: App | QR | IoT_Sensor | WhatsApp")
-    reporter_name: Optional[str] = Field(default="", description="Passenger or staff name")
-    reporter_phone: Optional[str] = Field(default="", description="Phone for WhatsApp notification")
-    reporter_email: Optional[str] = Field(default="", description="Email for confirmation")
+    short_description: str
+    location: str
+    area: str
+    department: str = "Facilities"
+    reported_via: str = "App"
+    reporter_phone: Optional[str] = ""
+    reporter_email: Optional[str] = ""
 
 
 class IncidentUpdate(BaseModel):
@@ -59,50 +48,42 @@ def cleanup_snow_record(record):
 
 
 @router.get("/")
-async def list_incidents(limit: int = 50, department: str = "", user: dict = Depends(get_current_user)):
+def list_incidents(limit: int = 50, department: str = "", user=Depends(get_current_user)):
     query = f"u_department={department}" if department else ""
-    res = await sn.get_incidents(limit=limit, query=query)
+    res = sn.get_incidents(limit=limit, query=query)
     if "result" in res and isinstance(res["result"], list):
         res["result"] = [cleanup_snow_record(r) for r in res["result"]]
     return res
 
 
 @router.get("/track/{number}")
-async def track_incident(number: str):
-    res = await sn.get_incident_by_number(number)
+def track_incident(number: str, user=Depends(get_current_user)):
+    res = sn.get_incident_by_number(number)
     if "result" in res and isinstance(res["result"], list):
         res["result"] = [cleanup_snow_record(r) for r in res["result"]]
     return res
 
 
 @router.get("/{sys_id}")
-async def get_incident(sys_id: str, user: dict = Depends(get_current_user)):
-    res = await sn.get_incident(sys_id)
+def get_incident(sys_id: str, user=Depends(get_current_user)):
+    res = sn.get_incident(sys_id)
     if "result" in res and isinstance(res["result"], dict):
         res["result"] = cleanup_snow_record(res["result"])
     return res
 
 
 @router.post("/")
-async def create_incident(data: IncidentCreate):
+@limiter.limit("5/minute")
+def create_incident(request: Request, data: IncidentCreate, user=Depends(get_current_user)):
     try:
         # Step 1 — AI Triage
-        triage = await llm.triage_incident(
+        triage = llm.triage_incident(
             data.short_description, data.location, data.area, data.department
         )
 
-        # Step 1.5 — SLA Calculation
-        priority_sla_map = {
-            "1": 30,    # 30 mins
-            "2": 120,   # 2 hours
-            "3": 240,   # 4 hours
-            "4": 480,   # 8 hours
-            "5": 1440,  # 24 hours
-        }
-        sla_mins = priority_sla_map.get(str(triage["priority"]), 240)
-        target_resolution = (datetime.now() + timedelta(minutes=sla_mins)).isoformat()
-
-        # Step 2 — Build ServiceNow payload
+        # Step 2 — Build ServiceNow payload using ONLY standard incident fields
+        # Custom fields (u_department, u_area, etc.) may not exist in the instance
+        # and can trigger Business Rules. Store metadata in description/work_notes.
         ai_notes = (
             f"🤖 AI Triage Result:\n"
             f"  Team: {triage['assigned_team']}\n"
@@ -113,13 +94,8 @@ async def create_incident(data: IncidentCreate):
             f"  Recommended Action: {triage['recommended_action']}\n\n"
             f"📍 Location: {data.location} — {data.area}\n"
             f"📱 Reported via: {data.reported_via}\n"
-            f"👤 Reporter: {data.reporter_name or 'Anonymous'}\n"
             f"📞 Reporter Phone: {data.reporter_phone or 'N/A'}\n"
-            f"📧 Reporter Email: {data.reporter_email or 'N/A'}\n"
-            + (
-                "\n🚁 DRONE DISPATCH: Autonomous drone will perform initial visual verification."
-                if triage.get("assigned_team") == "Drone Fleet" else ""
-            )
+            f"📧 Reporter Email: {data.reporter_email or 'N/A'}"
         )
 
         payload = {
@@ -131,16 +107,10 @@ async def create_incident(data: IncidentCreate):
             "work_notes": ai_notes,
             "impact": "2",
             "urgency": "2",
-            "u_target_resolution": target_resolution,
-            "u_sla_minutes": sla_mins,
         }
 
-        # Step 3 — Create in ServiceNow (Async)
-        result = await sn.create_incident(payload)
-        
-        # Log Audit
-        log_audit("SYSTEM" if data.reported_via == "IoT_Sensor" else "PASSENGER", "CREATE_INCIDENT", 
-                  f"Number: {result.get('result', {}).get('number')} | Priority: {triage['priority']}")
+        # Step 3 — Create in ServiceNow
+        result = sn.create_incident(payload)
 
         # Handle failure
         if result.get("status") == "failure" or "error" in result:
@@ -153,20 +123,19 @@ async def create_incident(data: IncidentCreate):
         whatsapp_sent = False
         email_sent = False
 
-        # Step 4 — WhatsApp confirmation to passenger (Async)
+        # Step 4 — WhatsApp confirmation to passenger
         if data.reporter_phone:
             try:
-                whatsapp_sent = await send_confirmation(
+                whatsapp_sent = send_confirmation(
                     data.reporter_phone, inc_number, data.short_description
                 )
             except Exception as wa_err:
                 print(f"[WARN] WhatsApp send failed: {wa_err}")
 
-        # Step 5 — Email task assignment notification (Sync wrapper)
+        # Step 5 — Email task assignment notification
         if data.reporter_email:
             try:
-                email_sent = await run_in_threadpool(
-                    send_task_assignment,
+                email_sent = send_task_assignment(
                     data.reporter_email,
                     inc_number,
                     data.short_description,
@@ -191,32 +160,31 @@ async def create_incident(data: IncidentCreate):
 
 
 @router.patch("/{sys_id}")
-async def update_incident(sys_id: str, update: IncidentUpdate, user: dict = Depends(get_current_user)):
+def update_incident(sys_id: str, update: IncidentUpdate, user=Depends(get_current_user)):
+    require_role(user, ["admin", "manager", "technician", "electrician", "plumber", "security", "helpstaff"])
     data = {k: v for k, v in update.dict().items() if v}
 
     # If resolved — send WhatsApp + email to passenger
     if update.state == "6":
         try:
-            incident = await sn.get_incident(sys_id)
+            incident = sn.get_incident(sys_id)
             phone = incident.get("result", {}).get("u_reporter_phone", "")
             number = incident.get("result", {}).get("number", "")
             if phone:
                 try:
-                    await send_resolution(phone, number)
+                    send_resolution(phone, number)
                 except Exception as wa_err:
                     print(f"[WARN] WhatsApp resolution send failed: {wa_err}")
-            
-            log_audit(user["username"], "RESOLVE_INCIDENT", f"SysID: {sys_id} | Number: {number}")
         except Exception as lookup_err:
             print(f"[WARN] Could not fetch incident for notification: {lookup_err}")
 
-    return await sn.update_incident(sys_id, data)
+    return sn.update_incident(sys_id, data)
 
 
 @router.post("/{sys_id}/rate")
-async def rate_incident(sys_id: str, rating: RatingUpdate):
+def rate_incident(sys_id: str, rating: RatingUpdate, user=Depends(get_current_user)):
     data = {
         "u_passenger_rating": str(rating.rating),
         "u_rating_comment": rating.comment,
     }
-    return await sn.update_incident(sys_id, data)
+    return sn.update_incident(sys_id, data)
