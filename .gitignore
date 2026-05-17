@@ -52,7 +52,6 @@ yarn-debug.log*
 yarn-error.log*
 
 # ── Test / scratch ──
-test_*.py
 scratch/
 
 # ── QR / Generated ──
