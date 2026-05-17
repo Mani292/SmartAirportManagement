@@ -96,7 +96,7 @@ export default function QRGeneratorScreen() {
                                 <PreviewRow label="Area" value={area} />
                                 <PreviewRow label="Code" value={locationCode || "—"} />
                                 <Text style={styles.previewDeepLink} numberOfLines={2}>
-                                    https://smart-airport.vercel.app/?location={terminal}&area={area}&code={locationCode}
+                                    http://localhost:5173/?location={terminal}&area={area}&code={locationCode}
                                 </Text>
                             </View>
 
@@ -123,7 +123,7 @@ export default function QRGeneratorScreen() {
                                 <Text style={styles.qrDataHeader}>QR DATA STORED</Text>
                                 <Text style={styles.qrDataVal}>{qrInfo.terminal} • {qrInfo.area}</Text>
                                 <Text style={styles.qrDataCode}>{qrInfo.code}</Text>
-                                <Text style={styles.qrDataLink}>https://smart-airport.vercel.app/?location={qrInfo.terminal}&area={qrInfo.area}&code={qrInfo.code}</Text>
+                                <Text style={styles.qrDataLink}>http://localhost:5173/?location={qrInfo.terminal}&area={qrInfo.area}&code={qrInfo.code}</Text>
                             </View>
 
                             <Text style={styles.apiLabel}>QR image available via Backend API</Text>

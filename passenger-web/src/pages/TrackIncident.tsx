@@ -84,7 +84,7 @@ export default function TrackIncident() {
               style={{ paddingLeft: 40, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}
               placeholder="e.g. INC0010021"
               value={incNumber}
-              onChange={e => setIncNumber(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setIncNumber(e.target.value)}
               required
             />
           </div>

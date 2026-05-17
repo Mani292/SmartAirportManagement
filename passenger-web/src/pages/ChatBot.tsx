@@ -57,7 +57,7 @@ export default function ChatBot() {
         </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ width: 40, height: 40, borderRadius: 'var(--radius-full)', background: 'var(--color-primary-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Sparkles color="var(--color-primary)" size={20} />
+             <Sparkles color="var(--color-primary)" size={20} />
           </div>
           <div>
             <h1 className="brand-text" style={{ fontSize: '1.25rem' }}>AeroBot</h1>
@@ -102,14 +102,14 @@ export default function ChatBot() {
             </div>
           ))}
           {loading && (
-            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end' }}>
-              <div style={{ width: 28, height: 28, borderRadius: 14, background: 'var(--color-primary-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Sparkles size={14} color="var(--color-primary)" />
-              </div>
-              <div style={{ background: 'var(--color-bg-card)', padding: '12px 16px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', borderBottomLeftRadius: 4 }}>
-                <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Thinking...</p>
-              </div>
-            </div>
+             <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end' }}>
+                <div style={{ width: 28, height: 28, borderRadius: 14, background: 'var(--color-primary-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Sparkles size={14} color="var(--color-primary)" />
+                </div>
+                <div style={{ background: 'var(--color-bg-card)', padding: '12px 16px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', borderBottomLeftRadius: 4 }}>
+                   <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Thinking...</p>
+                </div>
+             </div>
           )}
           <div ref={bottomRef} />
         </div>
@@ -119,8 +119,8 @@ export default function ChatBot() {
         <input
           type="text" className="glass-input" style={{ flex: 1 }}
           placeholder="Describe the issue..."
-          value={input} onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && send()}
+          value={input} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInput(e.target.value)}
+          onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && send()}
         />
         <button
           onClick={() => send()} disabled={!input.trim() || loading}

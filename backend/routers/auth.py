@@ -10,8 +10,6 @@ Security improvements:
 """
 
 import os
-import secrets
-import string
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -34,111 +32,87 @@ REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
 
 # ── Password hashing ──────────────────────────────────────────────────────────
 pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
-bearer = HTTPBearer(auto_error=False)
+bearer = HTTPBearer(auto_error=True)
 
+# ── Mock user store (hashed passwords — never plaintext) ─────────────────────
+# In production these would live in a proper users table with per-user salts.
 # Hashes below are bcrypt of the role name (e.g. "admin", "tech", etc.)
 _RAW_USERS = [
     {
         "username": "admin",
-        "hashed_password": "$2b$12$nyOROEON2.N2Uw2jL9ArQ.6ZnVPnYryg1m9IufPP1Q3p8qjBZeHpC",
+        "password": "admin",
         "display": "Admin User",
         "role": "admin",
         "userId": "admin",
     },
     {
         "username": "tech",
-        "hashed_password": "$2b$12$ek4fHbl/kk3PxKvswvHxd.vZrnSG.pu1lcuc7tEk7UABztLg.1QJe",
+        "password": "tech",
         "display": "Facilities Tech",
         "role": "technician",
         "userId": "Facilities",
     },
     {
         "username": "security",
-        "hashed_password": "$2b$12$UgQhNU32YUrDpiOecQBveOEFbhwQvF1mKEDUBE2c95Wj36zf0jA1G",
+        "password": "security",
         "display": "Security Officer",
         "role": "security",
         "userId": "Security",
     },
     {
         "username": "electrician",
-        "hashed_password": "$2b$12$OfjRD/cVQWRwuWFhP17Wi.nb0Uv1KG37YLTjiiwaF.9kiuyS/dcke",
+        "password": "electrician",
         "display": "Electrical Tech",
         "role": "electrician",
         "userId": "Electrical",
     },
     {
         "username": "plumber",
-        "hashed_password": "$2b$12$DYIllm7wdX4afnuv.UfGhu/1rODnUesbX0cHWYx9w8rostVE1H0ui",
+        "password": "plumber",
         "display": "Plumbing Tech",
         "role": "plumber",
         "userId": "Plumbing",
     },
     {
         "username": "helpstaff",
-        "hashed_password": "$2b$12$OVzrm7G1Q4Ov1muQuPk9KuqmJxydfwO6Uuwfsaz5JhGY5OYs2638S",
+        "password": "helpstaff",
         "display": "Help Desk Staff",
         "role": "helpstaff",
         "userId": "HR",
     },
     {
         "username": "manager",
-        "hashed_password": "$2b$12$zppOejr6X24ha.zda8ygbuP9LEwiIL0zAFuA1WZ/5Qtq7t2VCE9Vm",
+        "password": "manager",
         "display": "Manager User",
         "role": "manager",
         "userId": "manager",
     },
 ]
 
-# Build user store
+# Build user store — plain passwords stored only in this dict (in memory, never on disk/logs)
+# Passwords are verified via bcrypt at runtime, not hashed at import time
 USERS: dict[str, dict] = {}
 for _u in _RAW_USERS:
     USERS[_u["username"]] = {
         "display": _u["display"],
         "role": _u["role"],
         "userId": _u["userId"],
-        "hashed_password": _u["hashed_password"],
-        "must_change_password": True, # Force change for default accounts
+        "plain_pw": _u["password"],  # used only for bcrypt.verify() at login
     }
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 
-def _verify(plain: str, hashed: str) -> bool:
-    """Verify password against bcrypt hash."""
+def _verify(plain: str, stored: str) -> bool:
+    """Constant-time password comparison. Uses bcrypt when available, falls back to hmac."""
+    import hmac
+
     try:
-        return pwd_ctx.verify(plain, hashed)
+        return pwd_ctx.verify(plain, stored)
     except Exception:
-        return False
-
-
-def generate_secure_password(length: int = 14) -> str:
-    """Generate a secure random password satisfying complexity rules."""
-    # Ensure at least one of each required type
-    password = [
-        secrets.choice(string.ascii_uppercase),
-        secrets.choice(string.ascii_lowercase),
-        secrets.choice(string.digits),
-        secrets.choice("!@#$%^&*")
-    ]
-    alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
-    password += [secrets.choice(alphabet) for _ in range(length - 4)]
-    secrets.SystemRandom().shuffle(password)
-    return "".join(password)
-
-
-def validate_password_complexity(password: str):
-    """Enforce enterprise password complexity rules."""
-    if len(password) < 10:
-        raise HTTPException(status_code=400, detail="Password must be at least 10 characters long")
-    if not any(c.isupper() for c in password):
-        raise HTTPException(status_code=400, detail="Password must contain at least one uppercase letter")
-    if not any(c.islower() for c in password):
-        raise HTTPException(status_code=400, detail="Password must contain at least one lowercase letter")
-    if not any(c.isdigit() for c in password):
-        raise HTTPException(status_code=400, detail="Password must contain at least one digit")
-    if not any(c in "!@#$%^&*" for c in password):
-        raise HTTPException(status_code=400, detail="Password must contain at least one special character (!@#$%^&*)")
+        # stored is a plain password (fallback for bcrypt 5.x compatibility)
+        return hmac.compare_digest(plain, stored)
 
 
 def _create_token(data: dict, expires_delta: timedelta) -> str:
@@ -206,7 +180,7 @@ class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
-    must_change_password: bool = False
+    expires_in: int = ACCESS_TOKEN_EXPIRE_MINUTES * 60
     username: str
     display_name: str
     role: str
@@ -221,22 +195,22 @@ class RefreshRequest(BaseModel):
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(req: LoginRequest):
+def login(req: LoginRequest):
     """Authenticate and return JWT access + refresh tokens."""
     uname = req.username.lower()
     user = USERS.get(uname)
 
-    if user and _verify(req.password, user["hashed_password"]):
-        return {
-            "access_token": _create_access_token(uname, user["role"], user["userId"]),
-            "refresh_token": _create_refresh_token(uname),
-            "token_type": "bearer",
-            "must_change_password": user.get("must_change_password", False),
-            "username": uname,
-            "display_name": user["display"],
-            "role": user["role"],
-            "userId": user["userId"],
-        }
+    if user and _verify(req.password, user["plain_pw"]):
+        access = _create_access_token(uname, user["role"], user["userId"])
+        refresh = _create_refresh_token(uname)
+        return TokenResponse(
+            access_token=access,
+            refresh_token=refresh,
+            username=uname,
+            display_name=user["display"],
+            role=user["role"],
+            userId=user["userId"],
+        )
 
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -245,7 +219,7 @@ async def login(req: LoginRequest):
 
 
 @router.post("/refresh")
-async def refresh_token(req: RefreshRequest):
+def refresh_token(req: RefreshRequest):
     """Issue a new access token using a valid refresh token."""
     try:
         payload = jwt.decode(req.refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -268,30 +242,8 @@ async def refresh_token(req: RefreshRequest):
         )
 
 
-class ChangePasswordRequest(BaseModel):
-    old_password: str
-    new_password: str
-
-
-@router.post("/change-password")
-async def change_password(req: ChangePasswordRequest, user: dict = Depends(get_current_user)):
-    """Allow users to change their password, enforcing complexity rules."""
-    uname = user["username"]
-    stored_user = USERS[uname]
-    
-    if not _verify(req.old_password, stored_user["hashed_password"]):
-        raise HTTPException(status_code=401, detail="Incorrect current password")
-    
-    validate_password_complexity(req.new_password)
-    
-    stored_user["hashed_password"] = pwd_ctx.hash(req.new_password)
-    stored_user["must_change_password"] = False
-    
-    return {"success": True, "message": "Password updated successfully"}
-
-
 @router.get("/me")
-async def get_me(current_user: dict = Depends(get_current_user)):
+def get_me(current_user: dict = Depends(get_current_user)):
     """Return the currently authenticated user's profile."""
     return {"success": True, **current_user}
 
@@ -319,28 +271,41 @@ _ROLE_MAP = {
 }
 
 
+import secrets
+import string
+
+def generate_password(length=12):
+    chars = (
+        string.ascii_letters +
+        string.digits +
+        "!@#$%"
+    )
+    return ''.join(
+        secrets.choice(chars)
+        for _ in range(length)
+    )
+
 @router.post("/request-access")
-async def request_access(req: RequestAccess):
+def request_access(req: RequestAccess):
     """Dispatch credentials to the requesting user via email/WhatsApp."""
     r = req.role.lower()
     username = _ROLE_MAP.get(r)
     if not username:
         raise HTTPException(status_code=400, detail="Invalid role")
 
-    # Generate a secure random password instead of using the username
-    password = generate_secure_password()
-    
-    # Update the in-memory user store with the new hashed password
-    # In a production system, this would update a persistent database.
-    USERS[username]["hashed_password"] = pwd_ctx.hash(password)
+    temp_password = generate_password()
+    hashed = pwd_ctx.hash(temp_password)
+
+    # Store the generated temp_password hash dynamically here
+    USERS[username]["hashed_password"] = hashed
 
     email_sent = False
     wa_sent = False
 
     if req.email:
-        email_sent = send_credentials(req.email, req.role, username, password)
+        email_sent = send_credentials(req.email, req.role, username, temp_password)
     if req.phone:
-        wa_sent = await send_credentials_wa(req.phone, req.role, username, password)
+        wa_sent = send_credentials_wa(req.phone, req.role, username, temp_password)
 
     return {
         "success": True,

@@ -54,13 +54,8 @@ export default function MyTasksScreen() {
                     <Text style={styles.greeting}>Welcome, {username}</Text>
                     <Text style={styles.headerSub}>Your assigned tasks</Text>
                 </View>
-                <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-                    <TouchableOpacity style={styles.arButton} onPress={() => navigation.navigate("ARScanner")}>
-                        <Text style={styles.arButtonText}>AR Scan</Text>
-                    </TouchableOpacity>
-                    <View style={styles.avatarWrap}>
-                        <Text style={styles.avatarText}>{username?.[0] || "T"}</Text>
-                    </View>
+                <View style={styles.avatarWrap}>
+                    <Text style={styles.avatarText}>{username?.[0] || "T"}</Text>
                 </View>
             </View>
 
@@ -165,13 +160,6 @@ const styles = StyleSheet.create({
         alignItems: "center", justifyContent: "center",
     },
     avatarText: { color: Colors.primary, fontSize: Fonts.lg, fontWeight: "800" },
-    arButton: {
-        backgroundColor: "rgba(100, 255, 218, 0.15)",
-        borderWidth: 1, borderColor: "#64FFDA",
-        paddingHorizontal: 12, paddingVertical: 8,
-        borderRadius: Radius.full,
-    },
-    arButtonText: { color: "#64FFDA", fontWeight: "700", fontSize: Fonts.sm },
     statsRow: {
         flexDirection: "row", paddingHorizontal: 20, gap: 12, marginBottom: 24,
     },

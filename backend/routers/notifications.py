@@ -30,7 +30,7 @@ class SummaryData(BaseModel):
 
 
 @router.post("/assignment")
-async def notify_assignment(data: AssignmentData):
+def notify_assignment(data: AssignmentData):
     sent = send_task_assignment(
         data.to,
         data.inc_number,
@@ -43,12 +43,12 @@ async def notify_assignment(data: AssignmentData):
 
 
 @router.post("/sla-breach")
-async def notify_sla(data: SLAData):
+def notify_sla(data: SLAData):
     sent = send_sla_breach(data.to, data.inc_number, data.priority, data.elapsed_mins)
     return {"sent": sent}
 
 
 @router.post("/daily-summary")
-async def daily_summary(data: SummaryData):
+def daily_summary(data: SummaryData):
     sent = send_daily_summary(data.to, data.total, data.resolved, data.overdue)
     return {"sent": sent}

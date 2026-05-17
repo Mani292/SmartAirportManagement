@@ -45,14 +45,11 @@ Thumbs.db
 
 # ── Logs ──
 *.log
-*_error.txt
-build_log.txt
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
 # ── Test / scratch ──
-test_*.py
 scratch/
 
 # ── QR / Generated ──

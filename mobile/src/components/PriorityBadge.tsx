@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { Radius, Fonts } from "../theme";
+import { Colors, Radius, Fonts } from "../theme";
 
 interface Props { priority: string; size?: "sm" | "md" }
 
