@@ -17,5 +17,9 @@ jobs:
           cd backend
           pip install -r requirements.txt
       - name: Run tests
+        env:
+          JWT_SECRET_KEY: testsecret
+          GROQ_API_KEY: test
         run: |
           PYTHONPATH=backend:. pytest backend/tests/
+
