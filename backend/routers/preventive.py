@@ -3,9 +3,10 @@ from typing import Optional
 import database as db
 import servicenow as sn
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
 from routers.auth import get_current_user
-from security.rbac import require_role
+from security.rbac import RoleChecker
+from pydantic import BaseModel
+from logger.audit import log_audit
 
 router = APIRouter()
 
@@ -26,16 +27,15 @@ class PreventiveUpdate(BaseModel):
 
 
 @router.get("/")
-def list_preventive(user=Depends(get_current_user)):
-    res = sn.get_preventive_tasks()
+async def list_preventive(user: dict = Depends(get_current_user)):
+    res = await sn.get_preventive_tasks()
     if "error" in res:
         return {"result": db.db_get_tasks(), "source": "fallback_db"}
     return res
 
 
 @router.post("/")
-def create_preventive(data: PreventiveCreate, user=Depends(get_current_user)):
-    require_role(user, ["admin", "manager"])
+async def create_preventive(data: PreventiveCreate, user: dict = Depends(RoleChecker(["admin", "manager"]))):
     payload = {
         "u_title": data.title,
         "u_asset_name": data.asset_id,
@@ -45,19 +45,24 @@ def create_preventive(data: PreventiveCreate, user=Depends(get_current_user)):
         "u_description": data.description or "",
         "u_status": "scheduled",
     }
-    res = sn.create_preventive_task(payload)
+    res = await sn.create_preventive_task(payload)
     if "error" in res:
         created = db.db_create_task(payload)
+        log_audit(user["username"], "CREATE_PREVENTIVE_FALLBACK", f"Title: {data.title}")
         return {"result": created, "source": "fallback_db"}
+    
+    log_audit(user["username"], "CREATE_PREVENTIVE", f"Title: {data.title}")
     return res
 
 
 @router.patch("/{sys_id}")
-def update_preventive(sys_id: str, update: PreventiveUpdate, user=Depends(get_current_user)):
-    require_role(user, ["admin", "manager", "technician", "electrician", "plumber", "security", "helpstaff"])
+async def update_preventive(sys_id: str, update: PreventiveUpdate, user: dict = Depends(get_current_user)):
     data = {k: v for k, v in update.model_dump().items() if v}
-    res = sn.update_preventive_task(sys_id, data)
+    res = await sn.update_preventive_task(sys_id, data)
     if "error" in res:
         updated = db.db_update_task(sys_id, data)
+        log_audit(user["username"], "UPDATE_PREVENTIVE_FALLBACK", f"SysID: {sys_id}")
         return {"result": updated, "source": "fallback_db"}
+    
+    log_audit(user["username"], "UPDATE_PREVENTIVE", f"SysID: {sys_id}")
     return res

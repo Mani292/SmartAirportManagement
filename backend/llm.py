@@ -2,23 +2,48 @@ import json
 import os
 
 from dotenv import load_dotenv
-from groq import Groq
+from groq import AsyncGroq
 
 load_dotenv()
 
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+_client = None
+
+
+def get_client():
+    global _client
+    if _client is None:
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            # Fallback for testing environment where LLM might not be used but code is imported
+            api_key = "mock_key"
+        _client = AsyncGroq(api_key=api_key)
+    return _client
+
+
 MODEL = "llama-3.1-8b-instant"
 
 
-def triage_incident(description, location, area, department):
+def sanitize_input(text: str) -> str:
+    """Sanitize user input to prevent prompt injection."""
+    if not isinstance(text, str):
+        return ""
+    # Block common injection keywords
+    blocked = ["system:", "ignore previous", "you are now", "instead of", "forget all"]
+    sanitized = text
+    for b in blocked:
+        sanitized = sanitized.replace(b, "[REDACTED]")
+    return sanitized.strip()
+
+
+async def triage_incident(description, location, area, department):
     prompt = f"""
 You are an airport operations AI triage assistant.
 Analyze this incident and return ONLY valid JSON, nothing else. No explanation.
 
-Incident: {description}
-Location: {location}
-Area: {area}
-Department: {department}
+Incident: {sanitize_input(description)}
+Location: {sanitize_input(location)}
+Area: {sanitize_input(area)}
+Department: {sanitize_input(department)}
 
 Return this exact JSON:
 {{
@@ -31,9 +56,11 @@ Return this exact JSON:
 }}
 
 Priority: 1=Critical(safety risk), 2=High(major impact), 3=Medium, 4=Low
-Important: "assigned_team" MUST be exactly one of: "Electrical", "Plumbing", "Security", "Facilities", "IT", "HR"
+Important: "assigned_team" MUST be exactly one of: "Electrical", "Plumbing", "Security", "Facilities", "IT", "HR", "Drone Fleet"
+Special Rule: If the incident involves a runway perimeter breach, suspicious package, or external threat, assign it to "Drone Fleet" for immediate automated visual verification.
 """
-    res = client.chat.completions.create(
+    client = get_client()
+    res = await client.chat.completions.create(
         model=MODEL, messages=[{"role": "user", "content": prompt}], temperature=0.1
     )
     content = res.choices[0].message.content.strip()
@@ -41,7 +68,7 @@ Important: "assigned_team" MUST be exactly one of: "Electrical", "Plumbing", "Se
     return json.loads(content)
 
 
-def chat_with_passenger(message, conversation_history):
+async def chat_with_passenger(message, conversation_history):
     system = """You are a friendly airport assistant helping passengers report facility issues.
 Ask for location if not provided.
 Ask for description of the issue if not clear.
@@ -51,39 +78,95 @@ Do not ask more than one question at a time."""
 
     messages = [{"role": "system", "content": system}]
     messages.extend(conversation_history)
-    messages.append({"role": "user", "content": message})
+    messages.append({"role": "user", "content": sanitize_input(message)})
 
-    res = client.chat.completions.create(
+    client = get_client()
+    res = await client.chat.completions.create(
         model="llama-3.1-8b-instant", messages=messages, temperature=0.7
     )
     return res.choices[0].message.content
 
 
-def get_kb_answer(question, asset, issue):
+async def get_kb_answer(question, asset, issue):
     prompt = f"""
 You are a senior airport facility maintenance expert.
-Asset: {asset}
-Current Issue: {issue}
-Technician Question: {question}
+Asset: {sanitize_input(asset)}
+Current Issue: {sanitize_input(issue)}
+Technician Question: {sanitize_input(question)}
 
 Give numbered step-by-step repair guidance.
 Mark any safety warnings with [SAFETY].
 Be practical and concise. Maximum 10 steps.
 """
-    res = client.chat.completions.create(
+    client = get_client()
+    res = await client.chat.completions.create(
         model=MODEL, messages=[{"role": "user", "content": prompt}], temperature=0.3
     )
     return res.choices[0].message.content
 
 
-def generate_resolution_summary(description, notes):
+async def generate_resolution_summary(description, notes):
     prompt = f"""
 Write a short professional resolution summary for this airport maintenance incident.
-Original Issue: {description}
-Resolution Notes: {notes}
+Original Issue: {sanitize_input(description)}
+Resolution Notes: {sanitize_input(notes)}
 Keep it under 3 sentences. Professional tone. No fluff.
 """
-    res = client.chat.completions.create(
+    client = get_client()
+    res = await client.chat.completions.create(
         model=MODEL, messages=[{"role": "user", "content": prompt}], temperature=0.2
     )
     return res.choices[0].message.content
+
+
+async def generate_shift_handover_summary(incidents: list, work_orders: list, manual_notes: str = "") -> str:
+    """Generate an AI shift handover summary for end-of-shift reporting."""
+    total_inc = len(incidents)
+    resolved = len([i for i in incidents if i.get("state") == "6"])
+    open_inc = total_inc - resolved
+    critical = len([i for i in incidents if i.get("priority") == "1"])
+    open_wo = len(work_orders)
+
+    prompt = f"""
+You are an airport operations AI assistant. Write a professional end-of-shift handover summary.
+
+Shift Statistics:
+- Total Incidents: {total_inc}
+- Resolved: {resolved}
+- Open/Active: {open_inc}
+- Critical Priority: {critical}
+- Open Work Orders: {open_wo}
+
+Manual Handover Notes from Staff:
+{sanitize_input(manual_notes) or "No manual notes provided."}
+
+Write a concise, professional 3-5 sentence handover summary that:
+1. States key operational metrics
+2. Highlights any critical outstanding items
+3. Notes key actions for the incoming shift
+Format: Professional, factual, actionable. No bullet points, just flowing text.
+"""
+    client = get_client()
+    res = await client.chat.completions.create(
+        model=MODEL, messages=[{"role": "user", "content": prompt}], temperature=0.3
+    )
+    return res.choices[0].message.content
+
+
+async def generate_incident_ai_summary(description: str, notes: str, triage: dict) -> str:
+    """Generate a one-paragraph AI summary for management reporting."""
+    prompt = f"""
+Write a single professional paragraph summarizing this airport incident for a management report.
+
+Incident: {sanitize_input(description)}
+Triage Result: Team={triage.get('assigned_team', 'N/A')}, Priority=P{triage.get('priority', 'N/A')}, Category={triage.get('category', 'N/A')}
+Resolution Notes: {sanitize_input(notes) or "Pending resolution."}
+
+Requirements: One paragraph, 2-3 sentences, professional tone, include team assigned and impact level.
+"""
+    client = get_client()
+    res = await client.chat.completions.create(
+        model=MODEL, messages=[{"role": "user", "content": prompt}], temperature=0.2
+    )
+    return res.choices[0].message.content
+
