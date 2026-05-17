@@ -32,6 +32,11 @@ pillow>=10.3.0
 # ServiceNow (REST fallback requests)
 requests>=2.31.0
 
+# Report Generation (PDF + Excel)
+reportlab>=4.1.0
+pandas>=2.2.0
+openpyxl>=3.1.0
+
 # Testing
 pytest>=8.2.0
 pytest-asyncio>=0.23.6

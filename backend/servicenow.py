@@ -138,3 +138,23 @@ async def get_asset_health_metrics(asset_id):
         "sysparm_orderbydesc": "sys_created_on"
     }
     return await _request("GET", url, params=params)
+
+# ── WORK ORDERS (ServiceNow wm_order) ──
+async def create_work_order(data):
+    """Create a work order in ServiceNow Work Management (wm_order table)."""
+    url = f"{INSTANCE}/api/now/table/wm_order"
+    return await _request("POST", url, json=data)
+
+async def update_work_order(sys_id, data):
+    """Update a ServiceNow work order."""
+    url = f"{INSTANCE}/api/now/table/wm_order/{sys_id}"
+    return await _request("PATCH", url, json=data)
+
+async def get_work_orders(limit=50, query=""):
+    """List work orders from ServiceNow."""
+    url = f"{INSTANCE}/api/now/table/wm_order"
+    params = {"sysparm_limit": limit, "sysparm_orderbydesc": "sys_created_on"}
+    if query:
+        params["sysparm_query"] = query
+    return await _request("GET", url, params=params)
+
