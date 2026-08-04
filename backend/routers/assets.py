@@ -11,7 +11,7 @@ from typing import Optional
 
 import database as db
 import servicenow as sn
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, status, Query
 from routers.auth import get_current_user
 from security.rbac import RoleChecker
 from pydantic import BaseModel, Field
