@@ -19,13 +19,14 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
-import servicenow as sn
 import database as db
-from fastapi import APIRouter, Depends, Query, HTTPException
+import servicenow as sn
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
+from security.rbac import RoleChecker
+
 from routers.auth import get_current_user
 from routers.incidents import cleanup_snow_record
-from security.rbac import RoleChecker
 
 router = APIRouter()
 log = logging.getLogger("reports")
@@ -34,6 +35,7 @@ SLA_THRESHOLDS = {"1": 30, "2": 120, "3": 240, "4": 480, "5": 1440}
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _compute_sla(incidents: list[dict]) -> dict:
     """Compute SLA metrics — compliance rate, breach list, MTTR."""
@@ -60,20 +62,28 @@ def _compute_sla(incidents: list[dict]) -> dict:
                 compliant += 1
             else:
                 breach_mins = int(mins - threshold)
-                breaches.append({
-                    "number": inc.get("number"),
-                    "priority": priority,
-                    "team": inc.get("u_department", "Unknown"),
-                    "threshold_mins": threshold,
-                    "actual_mins": int(mins),
-                    "breach_by_mins": breach_mins,
-                })
+                breaches.append(
+                    {
+                        "number": inc.get("number"),
+                        "priority": priority,
+                        "team": inc.get("u_department", "Unknown"),
+                        "threshold_mins": threshold,
+                        "actual_mins": int(mins),
+                        "breach_by_mins": breach_mins,
+                    }
+                )
         except (ValueError, TypeError):
             pass
 
     total_resolved = len(resolved)
-    compliance = round((compliant / total_resolved * 100), 1) if total_resolved else 100.0
-    mttr = round(sum(resolution_times) / len(resolution_times), 2) if resolution_times else 0.0
+    compliance = (
+        round((compliant / total_resolved * 100), 1) if total_resolved else 100.0
+    )
+    mttr = (
+        round(sum(resolution_times) / len(resolution_times), 2)
+        if resolution_times
+        else 0.0
+    )
     return {
         "total_incidents": len(incidents),
         "resolved_incidents": total_resolved,
@@ -88,9 +98,18 @@ def _compute_sla(incidents: list[dict]) -> dict:
 def _team_breakdown(incidents: list[dict]) -> list[dict]:
     teams: dict[str, Any] = {}
     for inc in incidents:
-        team = inc.get("u_department", inc.get("assigned_to", "Unassigned")) or "Unassigned"
+        team = (
+            inc.get("u_department", inc.get("assigned_to", "Unassigned"))
+            or "Unassigned"
+        )
         if team not in teams:
-            teams[team] = {"team": team, "total": 0, "resolved": 0, "open": 0, "critical": 0}
+            teams[team] = {
+                "team": team,
+                "total": 0,
+                "resolved": 0,
+                "open": 0,
+                "critical": 0,
+            }
         teams[team]["total"] += 1
         if inc.get("state") == "6":
             teams[team]["resolved"] += 1
@@ -106,16 +125,19 @@ def _priority_breakdown(incidents: list[dict]) -> list[dict]:
     result = []
     for p in ["1", "2", "3", "4", "5"]:
         matching = [i for i in incidents if str(i.get("priority", "")) == p]
-        result.append({
-            "priority": p,
-            "label": labels[p],
-            "total": len(matching),
-            "resolved": len([i for i in matching if i.get("state") == "6"]),
-        })
+        result.append(
+            {
+                "priority": p,
+                "label": labels[p],
+                "total": len(matching),
+                "resolved": len([i for i in matching if i.get("state") == "6"]),
+            }
+        )
     return result
 
 
 # ── Report Endpoints ──────────────────────────────────────────────────────────
+
 
 @router.get("/incidents")
 async def incident_report(
@@ -124,7 +146,11 @@ async def incident_report(
 ):
     """Comprehensive incident analytics."""
     incidents_res = await sn.get_incidents(limit=limit)
-    incidents = [cleanup_snow_record(i) for i in incidents_res.get("result", [])] if isinstance(incidents_res.get("result"), list) else []
+    incidents = (
+        [cleanup_snow_record(i) for i in incidents_res.get("result", [])]
+        if isinstance(incidents_res.get("result"), list)
+        else []
+    )
 
     return {
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -132,7 +158,9 @@ async def incident_report(
         "open": len([i for i in incidents if i.get("state") in ["1", "2", "3"]]),
         "resolved": len([i for i in incidents if i.get("state") == "6"]),
         "critical": len([i for i in incidents if i.get("priority") == "1"]),
-        "iot_auto_created": len([i for i in incidents if i.get("u_reported_via") == "IoT_Sensor"]),
+        "iot_auto_created": len(
+            [i for i in incidents if i.get("u_reported_via") == "IoT_Sensor"]
+        ),
         "priority_breakdown": _priority_breakdown(incidents),
         "team_breakdown": _team_breakdown(incidents),
     }
@@ -145,7 +173,11 @@ async def sla_report(
 ):
     """SLA compliance report with breach detail."""
     incidents_res = await sn.get_incidents(limit=limit)
-    incidents = [cleanup_snow_record(i) for i in incidents_res.get("result", [])] if isinstance(incidents_res.get("result"), list) else []
+    incidents = (
+        [cleanup_snow_record(i) for i in incidents_res.get("result", [])]
+        if isinstance(incidents_res.get("result"), list)
+        else []
+    )
     return {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "thresholds": SLA_THRESHOLDS,
@@ -161,7 +193,12 @@ async def asset_report(
     """Asset health and maintenance performance report."""
     assets = db.db_get_assets(airport_id=airport_id)
     tasks = db.db_get_tasks(airport_id=airport_id)
-    overdue = [t for t in tasks if t.get("u_status") == "scheduled" and t.get("u_due_date", "9999") < datetime.now().isoformat()]
+    overdue = [
+        t
+        for t in tasks
+        if t.get("u_status") == "scheduled"
+        and t.get("u_due_date", "9999") < datetime.now().isoformat()
+    ]
     status_summary = {}
     for a in assets:
         s = a.get("u_status", "unknown")
@@ -209,15 +246,211 @@ async def audit_report(
     user: dict = Depends(RoleChecker(["admin", "manager"])),
 ):
     """Paginated audit log with actor/action filtering."""
-    logs = db.db_get_audit_logs(airport_id=airport_id, actor=actor, action=action, limit=limit)
+    logs = db.db_get_audit_logs(
+        airport_id=airport_id, actor=actor, action=action, limit=limit
+    )
     return {"total": len(logs), "logs": logs}
 
 
 # ── Export Endpoints ──────────────────────────────────────────────────────────
 
+
+def _build_pdf(
+    title: str, airport_id: str, headers: list[str], data_rows: list[list[str]]
+) -> io.BytesIO:
+    try:
+        from reportlab.lib import colors
+        from reportlab.lib.enums import TA_CENTER
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+        from reportlab.lib.units import cm
+        from reportlab.platypus import (
+            Paragraph,
+            SimpleDocTemplate,
+            Spacer,
+            Table,
+            TableStyle,
+        )
+    except ImportError:
+        raise ImportError("reportlab not installed. Run: pip install reportlab")
+
+    # Build PDF in memory
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        leftMargin=1.5 * cm,
+        rightMargin=1.5 * cm,
+        topMargin=2 * cm,
+        bottomMargin=2 * cm,
+    )
+    styles = getSampleStyleSheet()
+    story = []
+
+    # Title
+    title_style = ParagraphStyle(
+        "title",
+        parent=styles["Heading1"],
+        alignment=TA_CENTER,
+        textColor=colors.HexColor("#0EA5E9"),
+        spaceAfter=12,
+    )
+    story.append(Paragraph(title, title_style))
+    story.append(
+        Paragraph(
+            f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')} | Airport: {airport_id}",
+            styles["Normal"],
+        )
+    )
+    story.append(Spacer(1, 0.5 * cm))
+
+    # Summary stats
+    story.append(Paragraph(f"Total Records: {len(data_rows)}", styles["Normal"]))
+    story.append(Spacer(1, 0.3 * cm))
+
+    if data_rows:
+        # Table
+        table_data = [headers] + data_rows
+        col_count = len(headers)
+        col_width = (A4[0] - 3 * cm) / col_count
+        t = Table(table_data, colWidths=[col_width] * col_count, repeatRows=1)
+        t.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0F172A")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, 0), 8),
+                    ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                    ("FONTSIZE", (0, 1), (-1, -1), 7),
+                    (
+                        "ROWBACKGROUNDS",
+                        (0, 1),
+                        (-1, -1),
+                        [colors.white, colors.HexColor("#F8FAFC")],
+                    ),
+                    ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#E2E8F0")),
+                    ("TOPPADDING", (0, 0), (-1, -1), 3),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ]
+            )
+        )
+        story.append(t)
+
+    # Footer
+    story.append(Spacer(1, 1 * cm))
+    story.append(
+        Paragraph(
+            "Smart Airport Management System — Confidential — Not for distribution",
+            ParagraphStyle(
+                "footer",
+                parent=styles["Normal"],
+                alignment=TA_CENTER,
+                textColor=colors.gray,
+                fontSize=7,
+            ),
+        )
+    )
+
+    doc.build(story)
+    return buffer
+
+
+async def _get_pdf_report_data(
+    report_type: str, airport_id: str
+) -> tuple[list[str] | None, list[list[str]] | None]:
+    data_rows: list[list[str]] = []
+    headers: list[str] = []
+
+    if report_type == "incidents":
+        res = await sn.get_incidents(limit=200)
+        incidents = (
+            [cleanup_snow_record(i) for i in res.get("result", [])]
+            if isinstance(res.get("result"), list)
+            else []
+        )
+        headers = [
+            "Number",
+            "Description",
+            "Priority",
+            "State",
+            "Team",
+            "Location",
+            "Created",
+        ]
+        for i in incidents[:100]:
+            data_rows.append(
+                [
+                    str(i.get("number", "")),
+                    str(i.get("short_description", ""))[:60],
+                    f"P{i.get('priority', '')}",
+                    str(i.get("state", "")),
+                    str(i.get("u_department", "")),
+                    str(i.get("location", "")),
+                    str(i.get("sys_created_on", ""))[:16],
+                ]
+            )
+    elif report_type == "workorders":
+        wos = db.db_get_work_orders(airport_id=airport_id)
+        headers = ["ID", "Title", "Team", "Status", "Approval", "Priority", "Created"]
+        for wo in wos[:100]:
+            data_rows.append(
+                [
+                    str(wo.get("sys_id", ""))[:8],
+                    str(wo.get("title", ""))[:50],
+                    str(wo.get("assigned_team", "")),
+                    str(wo.get("status", "")),
+                    str(wo.get("approval_status", "")),
+                    f"P{wo.get('priority', '')}",
+                    str(wo.get("created_at", ""))[:16],
+                ]
+            )
+    elif report_type == "assets":
+        assets = db.db_get_assets(airport_id=airport_id)
+        headers = [
+            "Name",
+            "Type",
+            "Location",
+            "Terminal",
+            "Status",
+            "Criticality",
+            "Last Serviced",
+        ]
+        for a in assets:
+            data_rows.append(
+                [
+                    str(a.get("u_name", "")),
+                    str(a.get("u_type", "")),
+                    str(a.get("u_location", "")),
+                    str(a.get("u_terminal", "")),
+                    str(a.get("u_status", "")),
+                    str(a.get("u_criticality", "")),
+                    str(a.get("u_last_serviced", ""))[:10],
+                ]
+            )
+    elif report_type == "audit":
+        logs = db.db_get_audit_logs(airport_id=airport_id, limit=200)
+        headers = ["Timestamp", "Actor", "Action", "Details"]
+        for l in logs[:100]:
+            data_rows.append(
+                [
+                    str(l.get("timestamp", ""))[:16],
+                    str(l.get("actor", "")),
+                    str(l.get("action", "")),
+                    str(l.get("details", ""))[:80],
+                ]
+            )
+    else:
+        return None, None
+
+    return headers, data_rows
+
+
 @router.get("/export/csv")
 async def export_csv(
-    report_type: str = Query(default="incidents", description="incidents | sla | assets | workorders | audit"),
+    report_type: str = Query(
+        default="incidents", description="incidents | sla | assets | workorders | audit"
+    ),
     airport_id: str = Query(default="SJC-01"),
     user: dict = Depends(RoleChecker(["admin", "manager"])),
 ):
@@ -226,7 +459,11 @@ async def export_csv(
 
     if report_type == "incidents":
         res = await sn.get_incidents(limit=500)
-        data = [cleanup_snow_record(i) for i in res.get("result", [])] if isinstance(res.get("result"), list) else []
+        data = (
+            [cleanup_snow_record(i) for i in res.get("result", [])]
+            if isinstance(res.get("result"), list)
+            else []
+        )
     elif report_type == "workorders":
         data = db.db_get_work_orders(airport_id=airport_id)
     elif report_type == "assets":
@@ -235,11 +472,17 @@ async def export_csv(
         data = db.db_get_audit_logs(airport_id=airport_id, limit=500)
     elif report_type == "sla":
         res = await sn.get_incidents(limit=500)
-        incidents = [cleanup_snow_record(i) for i in res.get("result", [])] if isinstance(res.get("result"), list) else []
+        incidents = (
+            [cleanup_snow_record(i) for i in res.get("result", [])]
+            if isinstance(res.get("result"), list)
+            else []
+        )
         sla = _compute_sla(incidents)
         data = sla.get("breaches", [])
     else:
-        raise HTTPException(status_code=400, detail=f"Unknown report type: {report_type}")
+        raise HTTPException(
+            status_code=400, detail=f"Unknown report type: {report_type}"
+        )
 
     if not data:
         raise HTTPException(status_code=404, detail="No data available for export")
@@ -250,7 +493,9 @@ async def export_csv(
     writer.writerows(data)
     output.seek(0)
 
-    filename = f"smart_airport_{report_type}_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
+    filename = (
+        f"smart_airport_{report_type}_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
+    )
     return StreamingResponse(
         iter([output.getvalue()]),
         media_type="text/csv",
@@ -265,127 +510,27 @@ async def export_pdf(
     user: dict = Depends(RoleChecker(["admin", "manager"])),
 ):
     """Export a summary report as a downloadable PDF using ReportLab."""
-    try:
-        from reportlab.lib.pagesizes import A4
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib.units import cm
-        from reportlab.lib import colors
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-        from reportlab.lib.enums import TA_CENTER, TA_LEFT
-    except ImportError:
-        raise HTTPException(status_code=500, detail="reportlab not installed. Run: pip install reportlab")
+    headers, data_rows = await _get_pdf_report_data(report_type, airport_id)
 
-    # Gather report data
-    data_rows: list[list[str]] = []
+    if headers is None or data_rows is None:
+        raise HTTPException(
+            status_code=400, detail=f"PDF not supported for: {report_type}"
+        )
+
     title = f"Smart Airport — {report_type.title()} Report"
 
-    if report_type == "incidents":
-        res = await sn.get_incidents(limit=200)
-        incidents = [cleanup_snow_record(i) for i in res.get("result", [])] if isinstance(res.get("result"), list) else []
-        headers = ["Number", "Description", "Priority", "State", "Team", "Location", "Created"]
-        for i in incidents[:100]:
-            data_rows.append([
-                str(i.get("number", "")),
-                str(i.get("short_description", ""))[:60],
-                f"P{i.get('priority', '')}",
-                str(i.get("state", "")),
-                str(i.get("u_department", "")),
-                str(i.get("location", "")),
-                str(i.get("sys_created_on", ""))[:16],
-            ])
-    elif report_type == "workorders":
-        wos = db.db_get_work_orders(airport_id=airport_id)
-        headers = ["ID", "Title", "Team", "Status", "Approval", "Priority", "Created"]
-        for wo in wos[:100]:
-            data_rows.append([
-                str(wo.get("sys_id", ""))[:8],
-                str(wo.get("title", ""))[:50],
-                str(wo.get("assigned_team", "")),
-                str(wo.get("status", "")),
-                str(wo.get("approval_status", "")),
-                f"P{wo.get('priority', '')}",
-                str(wo.get("created_at", ""))[:16],
-            ])
-    elif report_type == "assets":
-        assets = db.db_get_assets(airport_id=airport_id)
-        headers = ["Name", "Type", "Location", "Terminal", "Status", "Criticality", "Last Serviced"]
-        for a in assets:
-            data_rows.append([
-                str(a.get("u_name", "")),
-                str(a.get("u_type", "")),
-                str(a.get("u_location", "")),
-                str(a.get("u_terminal", "")),
-                str(a.get("u_status", "")),
-                str(a.get("u_criticality", "")),
-                str(a.get("u_last_serviced", ""))[:10],
-            ])
-    elif report_type == "audit":
-        logs = db.db_get_audit_logs(airport_id=airport_id, limit=200)
-        headers = ["Timestamp", "Actor", "Action", "Details"]
-        for l in logs[:100]:
-            data_rows.append([
-                str(l.get("timestamp", ""))[:16],
-                str(l.get("actor", "")),
-                str(l.get("action", "")),
-                str(l.get("details", ""))[:80],
-            ])
-    else:
-        raise HTTPException(status_code=400, detail=f"PDF not supported for: {report_type}")
+    try:
+        buffer = _build_pdf(title, airport_id, headers, data_rows)
+    except ImportError:
+        raise HTTPException(
+            status_code=500,
+            detail="reportlab not installed. Run: pip install reportlab",
+        )
 
-    # Build PDF in memory
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4,
-                            leftMargin=1.5*cm, rightMargin=1.5*cm,
-                            topMargin=2*cm, bottomMargin=2*cm)
-    styles = getSampleStyleSheet()
-    story = []
-
-    # Title
-    title_style = ParagraphStyle("title", parent=styles["Heading1"],
-                                 alignment=TA_CENTER, textColor=colors.HexColor("#0EA5E9"),
-                                 spaceAfter=12)
-    story.append(Paragraph(title, title_style))
-    story.append(Paragraph(
-        f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')} | Airport: {airport_id}",
-        styles["Normal"]
-    ))
-    story.append(Spacer(1, 0.5*cm))
-
-    # Summary stats
-    story.append(Paragraph(f"Total Records: {len(data_rows)}", styles["Normal"]))
-    story.append(Spacer(1, 0.3*cm))
-
-    if data_rows:
-        # Table
-        table_data = [headers] + data_rows
-        col_count = len(headers)
-        col_width = (A4[0] - 3*cm) / col_count
-        t = Table(table_data, colWidths=[col_width] * col_count, repeatRows=1)
-        t.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0F172A")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("FONTSIZE", (0, 0), (-1, 0), 8),
-            ("ALIGN", (0, 0), (-1, -1), "LEFT"),
-            ("FONTSIZE", (0, 1), (-1, -1), 7),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F8FAFC")]),
-            ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#E2E8F0")),
-            ("TOPPADDING", (0, 0), (-1, -1), 3),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-        ]))
-        story.append(t)
-
-    # Footer
-    story.append(Spacer(1, 1*cm))
-    story.append(Paragraph(
-        "Smart Airport Management System — Confidential — Not for distribution",
-        ParagraphStyle("footer", parent=styles["Normal"], alignment=TA_CENTER,
-                       textColor=colors.gray, fontSize=7)
-    ))
-
-    doc.build(story)
     buffer.seek(0)
-    filename = f"smart_airport_{report_type}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+    filename = (
+        f"smart_airport_{report_type}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+    )
     return StreamingResponse(
         iter([buffer.read()]),
         media_type="application/pdf",
