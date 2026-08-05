@@ -92,7 +92,7 @@ async def get_flight_board(
 
 
 @router.get("/flights/{sys_id}")
-async def get_flight(sys_id: str):
+async def get_flight(sys_id: str, user: dict = Depends(get_current_user)):
     """Get a single flight's details."""
     flights = db.db_get_flights()
     flight = next((f for f in flights if f.get("sys_id") == sys_id), None)

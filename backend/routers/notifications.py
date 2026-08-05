@@ -1,7 +1,8 @@
 from email_service import (send_daily_summary, send_sla_breach,
                            send_task_assignment)
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
+from routers.auth import get_current_user
 
 router = APIRouter()
 
@@ -30,7 +31,7 @@ class SummaryData(BaseModel):
 
 
 @router.post("/assignment")
-async def notify_assignment(data: AssignmentData):
+async def notify_assignment(data: AssignmentData, user: dict = Depends(get_current_user)):
     sent = send_task_assignment(
         data.to,
         data.inc_number,
@@ -43,12 +44,12 @@ async def notify_assignment(data: AssignmentData):
 
 
 @router.post("/sla-breach")
-async def notify_sla(data: SLAData):
+async def notify_sla(data: SLAData, user: dict = Depends(get_current_user)):
     sent = send_sla_breach(data.to, data.inc_number, data.priority, data.elapsed_mins)
     return {"sent": sent}
 
 
 @router.post("/daily-summary")
-async def daily_summary(data: SummaryData):
+async def daily_summary(data: SummaryData, user: dict = Depends(get_current_user)):
     sent = send_daily_summary(data.to, data.total, data.resolved, data.overdue)
     return {"sent": sent}
