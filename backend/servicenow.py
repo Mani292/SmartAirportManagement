@@ -29,7 +29,7 @@ USERNAME = os.getenv("SERVICENOW_USERNAME")
 PASSWORD = os.getenv("SERVICENOW_PASSWORD")
 
 # Use a global auth tuple or a client with auth
-auth = (USERNAME, PASSWORD)
+auth = (USERNAME or "", PASSWORD or "")
 headers = {"Content-Type": "application/json", "Accept": "application/json"}
 
 async def _request(method: str, url: str, **kwargs) -> dict:
@@ -133,9 +133,8 @@ async def get_asset_health_metrics(asset_id):
     """Fetch recent telemetry for an asset to perform anomaly detection."""
     url = f"{INSTANCE}/api/now/table/u_iot_telemetry"
     params = {
-        "sysparm_query": f"u_asset={asset_id}",
-        "sysparm_limit": 10,
-        "sysparm_orderbydesc": "sys_created_on"
+        "sysparm_query": f"u_asset={asset_id}^ORDERBYDESCsys_created_on",
+        "sysparm_limit": 10
     }
     return await _request("GET", url, params=params)
 
