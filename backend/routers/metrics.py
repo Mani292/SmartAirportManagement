@@ -21,7 +21,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends
 import servicenow as sn
-from database import db_get_tasks, db_get_telemetry
+from database import db_get_tasks
 from routers.auth import get_current_user
 from routers.incidents import cleanup_snow_record
 
@@ -30,10 +30,10 @@ log = logging.getLogger("metrics")
 
 # SLA thresholds in minutes (per IATA standards)
 SLA_THRESHOLDS: dict[str, int] = {
-    "1": 30,    # Critical/Safety
-    "2": 120,   # High
-    "3": 240,   # Medium
-    "4": 480,   # Low
+    "1": 30,  # Critical/Safety
+    "2": 120,  # High
+    "3": 240,  # Medium
+    "4": 480,  # Low
     "5": 1440,  # Planning
 }
 
@@ -145,13 +145,17 @@ async def get_system_metrics(user: dict = Depends(get_current_user)):
         incidents = [cleanup_snow_record(i) for i in incidents]
     else:
         incidents = []
-        log.warning("ServiceNow incidents unavailable, metrics will reflect zero incidents.")
+        log.warning(
+            "ServiceNow incidents unavailable, metrics will reflect zero incidents."
+        )
 
     # ── Fetch preventive tasks from fallback DB ──────────────────────────────
     preventive_tasks = db_get_tasks()
     overdue_tasks = [
-        t for t in preventive_tasks
-        if t.get("u_status") == "scheduled" and t.get("u_due_date", "9999") < datetime.now().isoformat()
+        t
+        for t in preventive_tasks
+        if t.get("u_status") == "scheduled"
+        and t.get("u_due_date", "9999") < datetime.now().isoformat()
     ]
 
     # ── Compute real KPIs ────────────────────────────────────────────────────
@@ -174,9 +178,24 @@ async def get_system_metrics(user: dict = Depends(get_current_user)):
             return "Yellow"
         return "Green"
 
-    terminal_1 = [i for i in incidents if "terminal 1" in (i.get("location") or "").lower() or "T1" in (i.get("location") or "")]
-    terminal_2 = [i for i in incidents if "terminal 2" in (i.get("location") or "").lower() or "T2" in (i.get("location") or "")]
-    airside = [i for i in incidents if "airside" in (i.get("location") or "").lower() or "runway" in (i.get("location") or "").lower()]
+    terminal_1 = [
+        i
+        for i in incidents
+        if "terminal 1" in (i.get("location") or "").lower()
+        or "T1" in (i.get("location") or "")
+    ]
+    terminal_2 = [
+        i
+        for i in incidents
+        if "terminal 2" in (i.get("location") or "").lower()
+        or "T2" in (i.get("location") or "")
+    ]
+    airside = [
+        i
+        for i in incidents
+        if "airside" in (i.get("location") or "").lower()
+        or "runway" in (i.get("location") or "").lower()
+    ]
 
     return {
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -195,8 +214,16 @@ async def get_system_metrics(user: dict = Depends(get_current_user)):
         },
         "team_breakdown": team_breakdown,
         "airport_health": {
-            "terminal_1": zone_status(len(terminal_1), len([i for i in terminal_1 if i.get("priority") == "1"])),
-            "terminal_2": zone_status(len(terminal_2), len([i for i in terminal_2 if i.get("priority") == "1"])),
-            "airside_runway": zone_status(len(airside), len([i for i in airside if i.get("priority") == "1"])),
+            "terminal_1": zone_status(
+                len(terminal_1),
+                len([i for i in terminal_1 if i.get("priority") == "1"]),
+            ),
+            "terminal_2": zone_status(
+                len(terminal_2),
+                len([i for i in terminal_2 if i.get("priority") == "1"]),
+            ),
+            "airside_runway": zone_status(
+                len(airside), len([i for i in airside if i.get("priority") == "1"])
+            ),
         },
     }
