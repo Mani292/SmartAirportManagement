@@ -1,21 +1,31 @@
-# 🧠 JARVIS-OS (Fable 5 V.A.U.L.T. Architecture)
+# 🧠 AI-OS (Formerly JARVIS V0.1)
 
-> **Status: Production-Ready** | A 100% local, voice-driven AI command center and autonomous agentic OS running on any Windows machine.
+> **Status: Next-Gen Agentic Architecture** | A 100% local, multi-agent AI Operating System running on your machine.
 
-JARVIS-OS is modeled on the decoupled Fable 5 OS framework. It handles multi-threaded local speech processing, cross-functional dynamic skill mapping, and persistent asynchronous long-term memory via local Markdown graphs.
+AI-OS has evolved from a simple voice assistant into a fully-fledged local Artificial Intelligence Operating System. It handles multi-threaded local speech processing, continuous autonomous reasoning via a multi-agent state graph, and persistent asynchronous long-term memory via local Markdown graph databases.
 
 ---
 
 ## ⚡ Core System Architecture
 
-* **The Brain (Skill Paradigm):** Orchestrated by **Gemini 2.5 Flash**. Native system scripts and dynamic skill subdirectories are evaluated, mapped, and appended to the LLM's functional execution scope at runtime.
-* **The Memory (Obsidian Vault RAG):** Bypasses centralized relational databases. System events, commands, and structured reports are written as standalone `.md` files via local secure HTTPS REST channels.
-* **The Voice (100% Offline Pipe):**
-* **Ears (STT):** `faster-whisper-small.en` running on local CPU utilizing ahead-of-time ambient acoustic calibration to mitigate audio clipping.
+### Layer 1: The UI (V.A.U.L.T. HUD)
+A dedicated multi-threaded GUI built with `CustomTkinter`. Audio acquisition, orchestration processing, and text streaming execute on decoupled background threads to prevent main interface freezing.
+
+### Layer 2: The Voice (100% Offline Pipe)
+* **Ears (STT):** `faster-whisper-small.en` running on local CPU utilizing ahead-of-time ambient acoustic calibration.
 * **Mouth (TTS):** `Kokoro v1.0` executing natively via ONNX runtimes to produce studio-grade natural human speech patterns without cloud overhead.
 
+### Layer 3: AI Kernel (The Brain)
+Powered by **LangGraph** and an open-source local LLM running on **Ollama** (e.g., `qwen2.5:7b`). The AI Kernel coordinates continuous reasoning loops:
+* **Planner Agent**: Decomposes user goals into actionable step-by-step logic.
+* **Executor Agent**: Runs system automation tools.
 
-* **The Face (V.A.U.L.T. HUD):** A dedicated multi-threaded GUI built with `CustomTkinter`. Audio acquisition, orchestration processing, and text streaming execute on decoupled background threads to prevent main interface freezing.
+### Layer 4: Memory Engine (Long-Term Vector DB)
+Local Markdown notes inside a Vault (e.g., Obsidian) are dynamically chunked and vectorized using **FAISS** and local **OllamaEmbeddings**.
+Before the Planner acts, it retrieves relevant contextual history, bridging the gap between passive storage and active semantic reasoning.
+
+### Layer 5: Skill Marketplace
+Dynamic skills (`open_website`, `shutdown_system`) are loaded as modular LangChain tools. The AI Kernel dynamically routes requests to the required sub-skills.
 
 ---
 
@@ -23,75 +33,50 @@ JARVIS-OS is modeled on the decoupled Fable 5 OS framework. It handles multi-thr
 
 ### 1. Pre-requisites
 
-Ensure your system has **Python 3.12+** and the fast package manager **uv** installed. If you do not have uv, install it via PowerShell:
-
-```powershell
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-
-```
+Ensure your system has **Python 3.12+**, the fast package manager **uv**, and **Ollama** installed locally.
 
 ### 2. Workspace Initialization
-
-Clone the repository, navigate to the root directory, and compile the isolated environment:
 
 ```bash
 git clone https://github.com/BhargavaKandala/JARVIS-V0.1.git
 cd JARVIS-V0.1
 uv venv
 uv pip install -r requirements.txt
-
 ```
 
-### 3. Local Model Deployment
+### 3. Start Local AI Services (Ollama)
 
-Jarvis operates 100% offline. To bypass manual Hugging Face searching, initialize the included setup downloader to fetch the speech assets:
+Ensure Ollama is running in the background with your target LLM and embedding models pulled:
+```bash
+ollama pull qwen2.5:7b-instruct
+ollama pull nomic-embed-text
+```
 
+### 4. Local Voice Models
+
+Initialize the included setup downloader to fetch offline speech assets:
 ```bash
 uv run download_kokoro.py
-
 ```
 
-> **Note:** Verify that `kokoro-v1.0.onnx` and `voices-v1.0.bin` are present in your workspace root before proceeding.
+### 5. Memory Vault Configuration
+Create a local folder to serve as the Memory Vault, or point it to an existing Obsidian Vault directory.
 
-### 4. Mounting the Obsidian Brain
-
-Initialize a clean local vault inside your Obsidian desktop app.
-
-1. Navigate to **Settings** > **Community Plugins** and toggle "Restricted Mode" off.
-2. Install, activate, and enable the **Local REST API** plugin.
-3. Open the plugin configurations: Verify that the endpoint utilizes secure HTTPS (`https://127.0.0.1:27123`) and copy your unique alphanumeric API Key.
-
-### 5. Runtime Environment Setup
-
-Construct your personal execution settings profile by duplicating the production template:
-
-```bash
-cp .env.example .env
-
-```
-
-Open the newly created `.env` file and insert your respective authorization strings:
-
+Configure your `.env`:
 ```env
-GOOGLE_API_KEY=your_gemini_api_key_here
-OBSIDIAN_URL=https://127.0.0.1:27123
-OBSIDIAN_API_KEY=your_copied_raw_api_key_here
-
+OBSIDIAN_VAULT_PATH=/path/to/your/vault
 ```
-
-> ⚠️ **Crucial:** Ensure no extra whitespaces, quotations, or strings like "Bearer" prefix the Obsidian token.
 
 ---
 
 ## 🚀 Ignition Sequence
 
-With your Obsidian workspace active in the background, fire up the command interface:
+With your Ollama server active, fire up the command interface:
 
 ```bash
 uv run main.py
-
 ```
 
-* Allow **2 seconds** for the workspace mic to adapt to ambient room acoustics.
-* When the glowing kinetic particle engine initializes and reads **AWAITING AUDIO**, call out: *"Hey Jarvis..."*
-* Instruct it: *"Jarvis, open YouTube and play a song"* or *"Jarvis, save a memory called Project Alpha and write down that local models are stable."*
+* When the HUD reads **AWAITING AUDIO**, call out: *"Hey Jarvis..."*
+* Instruct it: *"Jarvis, research the latest local LLMs and save a summary into my memory vault."*
+* Watch as the **Planner Agent** parses the intent, queries the **Memory Engine** for context, executes the **Browser Skill**, and uses the **Memory Skill** to save its findings—all 100% locally.

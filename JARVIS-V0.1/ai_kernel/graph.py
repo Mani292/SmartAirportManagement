@@ -25,9 +25,23 @@ def create_graph(llm_with_tools, tools, memory_engine=None):
         messages = state.get("messages", [])
         memory_context = state.get("memory_context", "")
 
-        # Inject memory context into the system message if not already present
-        if memory_context and not any("Found the following relevant memories:" in str(msg.content) for msg in messages):
-            system_msg = SystemMessage(content=f"You are JARVIS. Use this long-term memory context if relevant:\n{memory_context}")
+        # Inject memory context and Chain of Thought instructions into the system message
+        cot_instructions = (
+            "You are the central AI Kernel for JARVIS-OS.\n"
+            "You operate autonomously using the following loop:\n"
+            "1. OBSERVE: Read the user's intent and any memory context provided below.\n"
+            "2. PLAN: Break the task down into logical steps.\n"
+            "3. EXECUTE: Call the appropriate tools to accomplish the steps.\n"
+            "4. REFLECT: Ensure the result fulfills the user's request before responding.\n\n"
+        )
+
+        system_content = cot_instructions
+        if memory_context:
+            system_content += f"Found the following relevant long-term memories:\n{memory_context}\n"
+
+        # Ensure we only prepend this meta-instruction once
+        if not any("You operate autonomously using the following loop:" in str(msg.content) for msg in messages):
+            system_msg = SystemMessage(content=system_content)
             messages = [system_msg] + list(messages)
 
         response = llm_with_tools.invoke(messages)
