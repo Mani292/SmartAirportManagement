@@ -27,7 +27,7 @@ load_dotenv()
 router = APIRouter()
 
 # ── JWT Config ────────────────────────────────────────────────────────────────
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "changeme-use-a-real-secret-in-production")
+SECRET_KEY = os.getenv("JWT_SECRET_KEY", secrets.token_hex(32))
 ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
@@ -41,49 +41,49 @@ bearer = HTTPBearer(auto_error=False)
 _RAW_USERS = [
     {
         "username": "admin",
-        "hashed_password": "$2b$12$nyOROEON2.N2Uw2jL9ArQ.6ZnVPnYryg1m9IufPP1Q3p8qjBZeHpC", # 'admin' - still used for initial dev setup
+        "hashed_password": "$2b$12$nyOROEON2.N2Uw2jL9ArQ.6ZnVPnYryg1m9IufPP1Q3p8qjBZeHpC",  # 'admin' - still used for initial dev setup
         "display": "Admin User",
         "role": "admin",
         "userId": "admin",
     },
     {
         "username": "tech",
-        "hashed_password": "$2b$12$L7W6WfXq.xL.6mGf/Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf", # placeholder - replace in production
+        "hashed_password": "$2b$12$L7W6WfXq.xL.6mGf/Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf",  # placeholder - replace in production
         "display": "Facilities Tech",
         "role": "technician",
         "userId": "Facilities",
     },
     {
         "username": "security",
-        "hashed_password": "$2b$12$Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf", # placeholder
+        "hashed_password": "$2b$12$Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf.Gf",  # placeholder
         "display": "Security Officer",
         "role": "security",
         "userId": "Security",
     },
     {
         "username": "electrician",
-        "hashed_password": "$2b$12$Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh", # placeholder
+        "hashed_password": "$2b$12$Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh.Hh",  # placeholder
         "display": "Electrical Tech",
         "role": "electrician",
         "userId": "Electrical",
     },
     {
         "username": "plumber",
-        "hashed_password": "$2b$12$Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii", # placeholder
+        "hashed_password": "$2b$12$Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii.Ii",  # placeholder
         "display": "Plumbing Tech",
         "role": "plumber",
         "userId": "Plumbing",
     },
     {
         "username": "helpstaff",
-        "hashed_password": "$2b$12$Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj", # placeholder
+        "hashed_password": "$2b$12$Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj.Jj",  # placeholder
         "display": "Help Desk Staff",
         "role": "helpstaff",
         "userId": "HR",
     },
     {
         "username": "manager",
-        "hashed_password": "$2b$12$Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk", # placeholder
+        "hashed_password": "$2b$12$Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk.Kk",  # placeholder
         "display": "Manager User",
         "role": "manager",
         "userId": "manager",
@@ -98,7 +98,7 @@ for _u in _RAW_USERS:
         "role": _u["role"],
         "userId": _u["userId"],
         "hashed_password": _u["hashed_password"],
-        "must_change_password": True, # Force change for default accounts
+        "must_change_password": True,  # Force change for default accounts
     }
 
 
@@ -120,7 +120,7 @@ def generate_secure_password(length: int = 14) -> str:
         secrets.choice(string.ascii_uppercase),
         secrets.choice(string.ascii_lowercase),
         secrets.choice(string.digits),
-        secrets.choice("!@#$%^&*")
+        secrets.choice("!@#$%^&*"),
     ]
     alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
     password += [secrets.choice(alphabet) for _ in range(length - 4)]
@@ -131,15 +131,28 @@ def generate_secure_password(length: int = 14) -> str:
 def validate_password_complexity(password: str):
     """Enforce enterprise password complexity rules."""
     if len(password) < 10:
-        raise HTTPException(status_code=400, detail="Password must be at least 10 characters long")
+        raise HTTPException(
+            status_code=400, detail="Password must be at least 10 characters long"
+        )
     if not any(c.isupper() for c in password):
-        raise HTTPException(status_code=400, detail="Password must contain at least one uppercase letter")
+        raise HTTPException(
+            status_code=400,
+            detail="Password must contain at least one uppercase letter",
+        )
     if not any(c.islower() for c in password):
-        raise HTTPException(status_code=400, detail="Password must contain at least one lowercase letter")
+        raise HTTPException(
+            status_code=400,
+            detail="Password must contain at least one lowercase letter",
+        )
     if not any(c.isdigit() for c in password):
-        raise HTTPException(status_code=400, detail="Password must contain at least one digit")
+        raise HTTPException(
+            status_code=400, detail="Password must contain at least one digit"
+        )
     if not any(c in "!@#$%^&*" for c in password):
-        raise HTTPException(status_code=400, detail="Password must contain at least one special character (!@#$%^&*)")
+        raise HTTPException(
+            status_code=400,
+            detail="Password must contain at least one special character (!@#$%^&*)",
+        )
 
 
 def _create_token(data: dict, expires_delta: timedelta) -> str:
@@ -275,19 +288,21 @@ class ChangePasswordRequest(BaseModel):
 
 
 @router.post("/change-password")
-async def change_password(req: ChangePasswordRequest, user: dict = Depends(get_current_user)):
+async def change_password(
+    req: ChangePasswordRequest, user: dict = Depends(get_current_user)
+):
     """Allow users to change their password, enforcing complexity rules."""
     uname = user["username"]
     stored_user = USERS[uname]
-    
+
     if not _verify(req.old_password, stored_user["hashed_password"]):
         raise HTTPException(status_code=401, detail="Incorrect current password")
-    
+
     validate_password_complexity(req.new_password)
-    
+
     stored_user["hashed_password"] = pwd_ctx.hash(req.new_password)
     stored_user["must_change_password"] = False
-    
+
     return {"success": True, "message": "Password updated successfully"}
 
 
@@ -330,7 +345,7 @@ async def request_access(req: RequestAccess):
 
     # Generate a secure random password instead of using the username
     password = generate_secure_password()
-    
+
     # Update the in-memory user store with the new hashed password
     # In a production system, this would update a persistent database.
     USERS[username]["hashed_password"] = pwd_ctx.hash(password)
