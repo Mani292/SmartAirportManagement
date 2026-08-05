@@ -290,7 +290,7 @@ def db_get_latest_telemetry_for_assets(asset_ids: list[str]) -> dict[str, dict]:
             FROM u_iot_sensor
             WHERE asset_id IN ({placeholders})
             GROUP BY asset_id
-        """
+        """  # nosec B608
         rows = conn.execute(query, asset_ids).fetchall()
         return {r["asset_id"]: dict(r) for r in rows}
     finally:
