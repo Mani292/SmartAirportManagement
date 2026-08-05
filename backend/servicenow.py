@@ -29,7 +29,7 @@ USERNAME = os.getenv("SERVICENOW_USERNAME")
 PASSWORD = os.getenv("SERVICENOW_PASSWORD")
 
 # Use a global auth tuple or a client with auth
-auth = (USERNAME, PASSWORD)
+auth = (USERNAME or "", PASSWORD or "")
 headers = {"Content-Type": "application/json", "Accept": "application/json"}
 
 async def _request(method: str, url: str, **kwargs) -> dict:
