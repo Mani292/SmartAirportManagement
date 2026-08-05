@@ -36,13 +36,17 @@ def test_health():
 
 
 def test_root_has_version():
-    """Root endpoint must return version and docs link."""
+    """Root endpoint must return expected keys and values."""
     res = client.get("/")
     assert res.status_code == 200
     data = res.json()
-    assert "version" in data
-    assert "docs" in data
+    assert data["app"] == "Smart Airport Management"
+    assert data["status"] == "running"
+    assert isinstance(data["version"], str)
+    assert data["docs"] == "/docs"
+    assert data["redoc"] == "/redoc"
     assert "auth" in data
+    assert "problem_statement" in data
 
 
 def test_assets_fallback():
