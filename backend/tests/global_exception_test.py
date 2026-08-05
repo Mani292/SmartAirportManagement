@@ -30,17 +30,19 @@ def test_client_no_raise():
         yield c
 
 def test_global_exception_handler_env_dev(monkeypatch, test_client_no_raise: TestClient):
-    monkeypatch.setenv("ENVIRONMENT", "dev")
+    monkeypatch.setenv("DEBUG", "true")
     res = test_client_no_raise.get("/trigger-error-test")
     assert res.status_code == 500
     data = res.json()
-    assert data["error"] == "Internal Server Error"
-    assert data["details"] == "Test exception message"
+    assert data["success"] is False
+    assert data["message"] == "Internal Server Error"
+    assert data["detail"] == "Test exception message"
 
 def test_global_exception_handler_env_prod(monkeypatch, test_client_no_raise: TestClient):
-    monkeypatch.setenv("ENVIRONMENT", "prod")
+    monkeypatch.setenv("DEBUG", "false")
     res = test_client_no_raise.get("/trigger-error-test")
     assert res.status_code == 500
     data = res.json()
-    assert data["error"] == "Internal Server Error"
-    assert data["details"] == "Unexpected error occurred"
+    assert data["success"] is False
+    assert data["message"] == "Internal Server Error"
+    assert data["detail"] == "An unexpected error occurred."
