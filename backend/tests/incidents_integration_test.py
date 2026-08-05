@@ -69,3 +69,52 @@ def test_iot_anomaly_trigger_incident(mock_create_inc, mock_log, mock_detect):
     assert data["status"] == "anomaly_detected"
     assert data["anomaly_type"] == "OVERHEATING"
     mock_create_inc.assert_called_once()
+
+@patch("routers.incidents.sn.get_incident", new_callable=AsyncMock)
+def test_get_incident_success(mock_get_incident, client, admin_headers):
+    mock_get_incident.return_value = {
+        "result": {
+            "number": "INC0010002",
+            "sys_id": "sys456",
+            "assigned_to": {
+                "display_value": "John Doe",
+                "value": "user123"
+            },
+            "location": {
+                "value": "loc_sys_id"
+            }
+        }
+    }
+
+    response = client.get("/api/v1/incidents/sys456", headers=admin_headers)
+    assert response.status_code == 200
+
+    data = response.json()
+    assert "result" in data
+    assert data["result"]["number"] == "INC0010002"
+    # Verify cleanup_snow_record worked
+    assert data["result"]["assigned_to"] == "John Doe"
+    assert data["result"]["location"] == "loc_sys_id"
+
+    mock_get_incident.assert_called_once_with("sys456")
+
+
+@patch("routers.incidents.sn.get_incident", new_callable=AsyncMock)
+def test_get_incident_not_found(mock_get_incident, client, admin_headers):
+    mock_get_incident.return_value = {
+        "error": {
+            "message": "No Record found",
+            "detail": "Record doesn't exist or ACL restricts the record retrieval"
+        },
+        "status": "failure"
+    }
+
+    response = client.get("/api/v1/incidents/invalid_id", headers=admin_headers)
+    assert response.status_code == 200
+
+    data = response.json()
+    assert "error" in data
+    assert data["status"] == "failure"
+    assert data["error"]["message"] == "No Record found"
+
+    mock_get_incident.assert_called_once_with("invalid_id")
