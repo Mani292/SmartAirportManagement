@@ -17,7 +17,6 @@ from email_service import send_task_assignment
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.concurrency import run_in_threadpool
 from routers.auth import get_current_user
-from security.rbac import RoleChecker
 from pydantic import BaseModel, Field
 from whatsapp import send_confirmation, send_resolution
 from logger.audit import log_audit
