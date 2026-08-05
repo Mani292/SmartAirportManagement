@@ -9,7 +9,7 @@ client = TestClient(app)
 @patch("routers.incidents.sn.create_incident", new_callable=AsyncMock)
 @patch("routers.incidents.send_confirmation", new_callable=AsyncMock)
 @patch("routers.incidents.run_in_threadpool", new_callable=AsyncMock)
-def test_create_incident_integration(mock_run, mock_wa, mock_create, mock_triage):
+def test_create_incident_integration(mock_run, mock_wa, mock_create, mock_triage, admin_headers):
     # Mock return values for AI Triage and ServiceNow creation
     mock_triage.return_value = {
         "assigned_team": "Electrical",
@@ -37,7 +37,7 @@ def test_create_incident_integration(mock_run, mock_wa, mock_create, mock_triage
         "reporter_email": "test@example.com"
     }
 
-    response = client.post("/api/v1/incidents/", json=payload)
+    response = client.post("/api/v1/incidents/", json=payload, headers=admin_headers)
 
     assert response.status_code == 200
     data = response.json()

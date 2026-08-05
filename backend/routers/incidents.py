@@ -68,7 +68,7 @@ async def list_incidents(limit: int = 50, department: str = "", user: dict = Dep
 
 
 @router.get("/track/{number}")
-async def track_incident(number: str):
+async def track_incident(number: str, user: dict = Depends(get_current_user)):
     res = await sn.get_incident_by_number(number)
     if "result" in res and isinstance(res["result"], list):
         res["result"] = [cleanup_snow_record(r) for r in res["result"]]
@@ -84,7 +84,7 @@ async def get_incident(sys_id: str, user: dict = Depends(get_current_user)):
 
 
 @router.post("/")
-async def create_incident(data: IncidentCreate):
+async def create_incident(data: IncidentCreate, user: dict = Depends(get_current_user)):
     try:
         # Step 1 — AI Triage
         triage = await llm.triage_incident(
@@ -214,7 +214,7 @@ async def update_incident(sys_id: str, update: IncidentUpdate, user: dict = Depe
 
 
 @router.post("/{sys_id}/rate")
-async def rate_incident(sys_id: str, rating: RatingUpdate):
+async def rate_incident(sys_id: str, rating: RatingUpdate, user: dict = Depends(get_current_user)):
     data = {
         "u_passenger_rating": str(rating.rating),
         "u_rating_comment": rating.comment,
