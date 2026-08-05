@@ -14,7 +14,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from typing import Optional
-from database import db_log_telemetry, db_get_telemetry, db_get_assets
+from database import db_log_telemetry, db_get_telemetry, db_get_assets, db_get_latest_telemetry_for_assets
 from services.anomaly_detection import detect_anomaly
 from services.predictive_ai import predict_maintenance_need
 from routers.incidents import create_incident, IncidentCreate
@@ -180,11 +180,13 @@ async def get_fleet_health(airport_id: str = "SJC-01", user: dict = Depends(get_
     assets = db_get_assets(airport_id=airport_id)
     fleet_status = []
 
+    asset_ids = [asset.get("sys_id", "") for asset in assets if asset.get("sys_id")]
+    latest_telemetry_map = db_get_latest_telemetry_for_assets(asset_ids)
+
     for asset in assets:
         asset_id = asset.get("sys_id", "")
-        latest = db_get_telemetry(asset_id, limit=1)
-        if latest:
-            reading = latest[0]
+        reading = latest_telemetry_map.get(asset_id)
+        if reading:
             anomaly = detect_anomaly(
                 temperature=reading.get("temperature", 60),
                 vibration=reading.get("vibration", 20),

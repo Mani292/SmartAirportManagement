@@ -279,6 +279,23 @@ def init_db() -> None:
     finally:
         conn.close()
 
+def db_get_latest_telemetry_for_assets(asset_ids: list[str]) -> dict[str, dict]:
+    if not asset_ids:
+        return {}
+    conn = get_connection()
+    try:
+        placeholders = ','.join('?' * len(asset_ids))
+        query = f"""
+            SELECT *, MAX(timestamp)
+            FROM u_iot_sensor
+            WHERE asset_id IN ({placeholders})
+            GROUP BY asset_id
+        """
+        rows = conn.execute(query, asset_ids).fetchall()
+        return {r["asset_id"]: dict(r) for r in rows}
+    finally:
+        conn.close()
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Asset helpers
