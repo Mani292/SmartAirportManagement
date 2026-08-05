@@ -118,3 +118,54 @@ def test_get_incident_not_found(mock_get_incident, client, admin_headers):
     assert data["error"]["message"] == "No Record found"
 
     mock_get_incident.assert_called_once_with("invalid_id")
+
+
+@patch("routers.incidents.sn.update_incident", new_callable=AsyncMock)
+def test_rate_incident_success(mock_update_incident, client, admin_headers):
+    mock_update_incident.return_value = {
+        "result": {
+            "sys_id": "sys789",
+            "u_passenger_rating": "5",
+            "u_rating_comment": "Great service!"
+        }
+    }
+
+    payload = {
+        "rating": 5,
+        "comment": "Great service!"
+    }
+
+    response = client.post("/api/v1/incidents/sys789/rate", json=payload, headers=admin_headers)
+    assert response.status_code == 200
+
+    data = response.json()
+    assert "result" in data
+    assert data["result"]["u_passenger_rating"] == "5"
+
+    mock_update_incident.assert_called_once_with("sys789", {
+        "u_passenger_rating": "5",
+        "u_rating_comment": "Great service!"
+    })
+
+
+@patch("routers.incidents.sn.update_incident", new_callable=AsyncMock)
+def test_rate_incident_no_comment(mock_update_incident, client, admin_headers):
+    mock_update_incident.return_value = {
+        "result": {
+            "sys_id": "sys789",
+            "u_passenger_rating": "3",
+            "u_rating_comment": ""
+        }
+    }
+
+    payload = {
+        "rating": 3
+    }
+
+    response = client.post("/api/v1/incidents/sys789/rate", json=payload, headers=admin_headers)
+    assert response.status_code == 200
+
+    mock_update_incident.assert_called_once_with("sys789", {
+        "u_passenger_rating": "3",
+        "u_rating_comment": ""
+    })

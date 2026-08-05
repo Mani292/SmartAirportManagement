@@ -74,8 +74,8 @@ app.add_middleware(
         os.getenv("FRONTEND_URL", ""),  # Production frontend
     ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["Content-Type", "Authorization", "Accept"],
 )
 
 
