@@ -19,13 +19,14 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
-import servicenow as sn
 import database as db
-from fastapi import APIRouter, Depends, Query, HTTPException
+import servicenow as sn
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
+from security.rbac import RoleChecker
+
 from routers.auth import get_current_user
 from routers.incidents import cleanup_snow_record
-from security.rbac import RoleChecker
 
 router = APIRouter()
 log = logging.getLogger("reports")
@@ -121,23 +122,15 @@ def _team_breakdown(incidents: list[dict]) -> list[dict]:
 
 def _priority_breakdown(incidents: list[dict]) -> list[dict]:
     labels = {"1": "Critical", "2": "High", "3": "Medium", "4": "Low", "5": "Planning"}
-    counts: dict[str, dict[str, int]] = {p: {"total": 0, "resolved": 0} for p in labels}
-
-    for inc in incidents:
-        p = str(inc.get("priority", ""))
-        if p in counts:
-            counts[p]["total"] += 1
-            if inc.get("state") == "6":
-                counts[p]["resolved"] += 1
-
     result = []
-    for p, label in labels.items():
+    for p in ["1", "2", "3", "4", "5"]:
+        matching = [i for i in incidents if str(i.get("priority", "")) == p]
         result.append(
             {
                 "priority": p,
-                "label": label,
-                "total": counts[p]["total"],
-                "resolved": counts[p]["resolved"],
+                "label": labels[p],
+                "total": len(matching),
+                "resolved": len([i for i in matching if i.get("state") == "6"]),
             }
         )
     return result
@@ -262,175 +255,24 @@ async def audit_report(
 # ── Export Endpoints ──────────────────────────────────────────────────────────
 
 
-@router.get("/export/csv")
-async def export_csv(
-    report_type: str = Query(
-        default="incidents", description="incidents | sla | assets | workorders | audit"
-    ),
-    airport_id: str = Query(default="SJC-01"),
-    user: dict = Depends(RoleChecker(["admin", "manager"])),
-):
-    """Export any report as a downloadable CSV file."""
-    data: list[dict] = []
-
-    if report_type == "incidents":
-        res = await sn.get_incidents(limit=500)
-        data = (
-            [cleanup_snow_record(i) for i in res.get("result", [])]
-            if isinstance(res.get("result"), list)
-            else []
-        )
-    elif report_type == "workorders":
-        data = db.db_get_work_orders(airport_id=airport_id)
-    elif report_type == "assets":
-        data = db.db_get_assets(airport_id=airport_id)
-    elif report_type == "audit":
-        data = db.db_get_audit_logs(airport_id=airport_id, limit=500)
-    elif report_type == "sla":
-        res = await sn.get_incidents(limit=500)
-        incidents = (
-            [cleanup_snow_record(i) for i in res.get("result", [])]
-            if isinstance(res.get("result"), list)
-            else []
-        )
-        sla = _compute_sla(incidents)
-        data = sla.get("breaches", [])
-    else:
-        raise HTTPException(
-            status_code=400, detail=f"Unknown report type: {report_type}"
-        )
-
-    if not data:
-        raise HTTPException(status_code=404, detail="No data available for export")
-
-    output = io.StringIO()
-    writer = csv.DictWriter(output, fieldnames=list(data[0].keys()))
-    writer.writeheader()
-    writer.writerows(data)
-    output.seek(0)
-
-    filename = (
-        f"smart_airport_{report_type}_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
-    )
-    return StreamingResponse(
-        iter([output.getvalue()]),
-        media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename={filename}"},
-    )
-
-
-@router.get("/export/pdf")
-async def export_pdf(
-    report_type: str = Query(default="incidents"),
-    airport_id: str = Query(default="SJC-01"),
-    user: dict = Depends(RoleChecker(["admin", "manager"])),
-):
-    """Export a summary report as a downloadable PDF using ReportLab."""
+def _build_pdf(
+    title: str, airport_id: str, headers: list[str], data_rows: list[list[str]]
+) -> io.BytesIO:
     try:
-        from reportlab.lib.pagesizes import A4
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib.units import cm
         from reportlab.lib import colors
+        from reportlab.lib.enums import TA_CENTER
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+        from reportlab.lib.units import cm
         from reportlab.platypus import (
-            SimpleDocTemplate,
             Paragraph,
+            SimpleDocTemplate,
             Spacer,
             Table,
             TableStyle,
         )
-        from reportlab.lib.enums import TA_CENTER, TA_LEFT
     except ImportError:
-        raise HTTPException(
-            status_code=500,
-            detail="reportlab not installed. Run: pip install reportlab",
-        )
-
-    # Gather report data
-    data_rows: list[list[str]] = []
-    title = f"Smart Airport — {report_type.title()} Report"
-
-    if report_type == "incidents":
-        res = await sn.get_incidents(limit=200)
-        incidents = (
-            [cleanup_snow_record(i) for i in res.get("result", [])]
-            if isinstance(res.get("result"), list)
-            else []
-        )
-        headers = [
-            "Number",
-            "Description",
-            "Priority",
-            "State",
-            "Team",
-            "Location",
-            "Created",
-        ]
-        for i in incidents[:100]:
-            data_rows.append(
-                [
-                    str(i.get("number", "")),
-                    str(i.get("short_description", ""))[:60],
-                    f"P{i.get('priority', '')}",
-                    str(i.get("state", "")),
-                    str(i.get("u_department", "")),
-                    str(i.get("location", "")),
-                    str(i.get("sys_created_on", ""))[:16],
-                ]
-            )
-    elif report_type == "workorders":
-        wos = db.db_get_work_orders(airport_id=airport_id)
-        headers = ["ID", "Title", "Team", "Status", "Approval", "Priority", "Created"]
-        for wo in wos[:100]:
-            data_rows.append(
-                [
-                    str(wo.get("sys_id", ""))[:8],
-                    str(wo.get("title", ""))[:50],
-                    str(wo.get("assigned_team", "")),
-                    str(wo.get("status", "")),
-                    str(wo.get("approval_status", "")),
-                    f"P{wo.get('priority', '')}",
-                    str(wo.get("created_at", ""))[:16],
-                ]
-            )
-    elif report_type == "assets":
-        assets = db.db_get_assets(airport_id=airport_id)
-        headers = [
-            "Name",
-            "Type",
-            "Location",
-            "Terminal",
-            "Status",
-            "Criticality",
-            "Last Serviced",
-        ]
-        for a in assets:
-            data_rows.append(
-                [
-                    str(a.get("u_name", "")),
-                    str(a.get("u_type", "")),
-                    str(a.get("u_location", "")),
-                    str(a.get("u_terminal", "")),
-                    str(a.get("u_status", "")),
-                    str(a.get("u_criticality", "")),
-                    str(a.get("u_last_serviced", ""))[:10],
-                ]
-            )
-    elif report_type == "audit":
-        logs = db.db_get_audit_logs(airport_id=airport_id, limit=200)
-        headers = ["Timestamp", "Actor", "Action", "Details"]
-        for l in logs[:100]:
-            data_rows.append(
-                [
-                    str(l.get("timestamp", ""))[:16],
-                    str(l.get("actor", "")),
-                    str(l.get("action", "")),
-                    str(l.get("details", ""))[:80],
-                ]
-            )
-    else:
-        raise HTTPException(
-            status_code=400, detail=f"PDF not supported for: {report_type}"
-        )
+        raise ImportError("reportlab not installed. Run: pip install reportlab")
 
     # Build PDF in memory
     buffer = io.BytesIO()
@@ -511,6 +353,180 @@ async def export_pdf(
     )
 
     doc.build(story)
+    return buffer
+
+
+async def _get_pdf_report_data(
+    report_type: str, airport_id: str
+) -> tuple[list[str] | None, list[list[str]] | None]:
+    data_rows: list[list[str]] = []
+    headers: list[str] = []
+
+    if report_type == "incidents":
+        res = await sn.get_incidents(limit=200)
+        incidents = (
+            [cleanup_snow_record(i) for i in res.get("result", [])]
+            if isinstance(res.get("result"), list)
+            else []
+        )
+        headers = [
+            "Number",
+            "Description",
+            "Priority",
+            "State",
+            "Team",
+            "Location",
+            "Created",
+        ]
+        for i in incidents[:100]:
+            data_rows.append(
+                [
+                    str(i.get("number", "")),
+                    str(i.get("short_description", ""))[:60],
+                    f"P{i.get('priority', '')}",
+                    str(i.get("state", "")),
+                    str(i.get("u_department", "")),
+                    str(i.get("location", "")),
+                    str(i.get("sys_created_on", ""))[:16],
+                ]
+            )
+    elif report_type == "workorders":
+        wos = db.db_get_work_orders(airport_id=airport_id)
+        headers = ["ID", "Title", "Team", "Status", "Approval", "Priority", "Created"]
+        for wo in wos[:100]:
+            data_rows.append(
+                [
+                    str(wo.get("sys_id", ""))[:8],
+                    str(wo.get("title", ""))[:50],
+                    str(wo.get("assigned_team", "")),
+                    str(wo.get("status", "")),
+                    str(wo.get("approval_status", "")),
+                    f"P{wo.get('priority', '')}",
+                    str(wo.get("created_at", ""))[:16],
+                ]
+            )
+    elif report_type == "assets":
+        assets = db.db_get_assets(airport_id=airport_id)
+        headers = [
+            "Name",
+            "Type",
+            "Location",
+            "Terminal",
+            "Status",
+            "Criticality",
+            "Last Serviced",
+        ]
+        for a in assets:
+            data_rows.append(
+                [
+                    str(a.get("u_name", "")),
+                    str(a.get("u_type", "")),
+                    str(a.get("u_location", "")),
+                    str(a.get("u_terminal", "")),
+                    str(a.get("u_status", "")),
+                    str(a.get("u_criticality", "")),
+                    str(a.get("u_last_serviced", ""))[:10],
+                ]
+            )
+    elif report_type == "audit":
+        logs = db.db_get_audit_logs(airport_id=airport_id, limit=200)
+        headers = ["Timestamp", "Actor", "Action", "Details"]
+        for l in logs[:100]:
+            data_rows.append(
+                [
+                    str(l.get("timestamp", ""))[:16],
+                    str(l.get("actor", "")),
+                    str(l.get("action", "")),
+                    str(l.get("details", ""))[:80],
+                ]
+            )
+    else:
+        return None, None
+
+    return headers, data_rows
+
+
+@router.get("/export/csv")
+async def export_csv(
+    report_type: str = Query(
+        default="incidents", description="incidents | sla | assets | workorders | audit"
+    ),
+    airport_id: str = Query(default="SJC-01"),
+    user: dict = Depends(RoleChecker(["admin", "manager"])),
+):
+    """Export any report as a downloadable CSV file."""
+    data: list[dict] = []
+
+    if report_type == "incidents":
+        res = await sn.get_incidents(limit=500)
+        data = (
+            [cleanup_snow_record(i) for i in res.get("result", [])]
+            if isinstance(res.get("result"), list)
+            else []
+        )
+    elif report_type == "workorders":
+        data = db.db_get_work_orders(airport_id=airport_id)
+    elif report_type == "assets":
+        data = db.db_get_assets(airport_id=airport_id)
+    elif report_type == "audit":
+        data = db.db_get_audit_logs(airport_id=airport_id, limit=500)
+    elif report_type == "sla":
+        res = await sn.get_incidents(limit=500)
+        incidents = (
+            [cleanup_snow_record(i) for i in res.get("result", [])]
+            if isinstance(res.get("result"), list)
+            else []
+        )
+        sla = _compute_sla(incidents)
+        data = sla.get("breaches", [])
+    else:
+        raise HTTPException(
+            status_code=400, detail=f"Unknown report type: {report_type}"
+        )
+
+    if not data:
+        raise HTTPException(status_code=404, detail="No data available for export")
+
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=list(data[0].keys()))
+    writer.writeheader()
+    writer.writerows(data)
+    output.seek(0)
+
+    filename = (
+        f"smart_airport_{report_type}_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
+    )
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@router.get("/export/pdf")
+async def export_pdf(
+    report_type: str = Query(default="incidents"),
+    airport_id: str = Query(default="SJC-01"),
+    user: dict = Depends(RoleChecker(["admin", "manager"])),
+):
+    """Export a summary report as a downloadable PDF using ReportLab."""
+    headers, data_rows = await _get_pdf_report_data(report_type, airport_id)
+
+    if headers is None or data_rows is None:
+        raise HTTPException(
+            status_code=400, detail=f"PDF not supported for: {report_type}"
+        )
+
+    title = f"Smart Airport — {report_type.title()} Report"
+
+    try:
+        buffer = _build_pdf(title, airport_id, headers, data_rows)
+    except ImportError:
+        raise HTTPException(
+            status_code=500,
+            detail="reportlab not installed. Run: pip install reportlab",
+        )
+
     buffer.seek(0)
     filename = (
         f"smart_airport_{report_type}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
