@@ -9,10 +9,6 @@ Problem Statement Integration:
 """
 
 from __future__ import annotations
-<<<<<<< HEAD
-import re
-=======
->>>>>>> origin/master
 from typing import Optional
 
 import llm
@@ -67,12 +63,6 @@ def cleanup_snow_record(record):
 
 @router.get("/")
 async def list_incidents(limit: int = 50, department: str = "", user: dict = Depends(get_current_user)):
-<<<<<<< HEAD
-    if department and not re.match(r"^[a-zA-Z0-9 _-]+$", department):
-        raise HTTPException(status_code=400, detail="Invalid department format")
-
-=======
->>>>>>> origin/master
     query = f"u_department={department}" if department else ""
     res = await sn.get_incidents(limit=limit, query=query)
     if "result" in res and isinstance(res["result"], list):

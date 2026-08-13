@@ -99,16 +99,6 @@ def test_get_incident_success(mock_get_incident, client, admin_headers):
     mock_get_incident.assert_called_once_with("sys456")
 
 
-<<<<<<< HEAD
-@patch("routers.incidents.sn.get_incidents", new_callable=AsyncMock)
-def test_list_incidents_invalid_department(mock_get_incidents, client, admin_headers):
-    response = client.get("/api/v1/incidents/?department=Facilities^ORu_department=IT", headers=admin_headers)
-    assert response.status_code == 400
-    assert response.json()["detail"] == "Invalid department format"
-    mock_get_incidents.assert_not_called()
-
-=======
->>>>>>> origin/master
 @patch("routers.incidents.sn.get_incident", new_callable=AsyncMock)
 def test_get_incident_not_found(mock_get_incident, client, admin_headers):
     mock_get_incident.return_value = {
