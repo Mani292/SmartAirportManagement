@@ -8,7 +8,10 @@ plugged in by replacing db_get_flights with an external API call).
 
 from __future__ import annotations
 from typing import Optional
+<<<<<<< HEAD
+=======
 import asyncio
+>>>>>>> origin/master
 
 import database as db
 import servicenow as sn
@@ -152,6 +155,14 @@ async def create_disruption_alert(
     notified = 0
     if alert.notify_passengers and alert.passenger_phones:
         guidance = DISRUPTION_GUIDANCE.get(alert.disruption_type) or DISRUPTION_GUIDANCE.get(alert.new_status, "")
+<<<<<<< HEAD
+        for phone in alert.passenger_phones[:50]:  # cap at 50 per call
+            try:
+                await send_confirmation(phone, flight_number, f"Flight {flight_number} is {alert.new_status}. {guidance}")
+                notified += 1
+            except Exception:
+                pass
+=======
 
         async def _notify(phone):
             try:
@@ -162,6 +173,7 @@ async def create_disruption_alert(
 
         results = await asyncio.gather(*[_notify(phone) for phone in alert.passenger_phones[:50]])
         notified = sum(1 for result in results if result)
+>>>>>>> origin/master
 
     log_audit(user["username"], "DISRUPTION_ALERT", f"Flight: {flight_number} | Status: {alert.new_status} | Notified: {notified}")
     return {

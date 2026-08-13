@@ -9,6 +9,10 @@ Problem Statement Integration:
 """
 
 from __future__ import annotations
+<<<<<<< HEAD
+import re
+=======
+>>>>>>> origin/master
 from typing import Optional
 
 import llm
@@ -17,6 +21,10 @@ from email_service import send_task_assignment
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.concurrency import run_in_threadpool
 from routers.auth import get_current_user
+<<<<<<< HEAD
+from security.rbac import RoleChecker
+=======
+>>>>>>> origin/master
 from pydantic import BaseModel, Field
 from whatsapp import send_confirmation, send_resolution
 from logger.audit import log_audit
@@ -59,6 +67,12 @@ def cleanup_snow_record(record):
 
 @router.get("/")
 async def list_incidents(limit: int = 50, department: str = "", user: dict = Depends(get_current_user)):
+<<<<<<< HEAD
+    if department and not re.match(r"^[a-zA-Z0-9 _-]+$", department):
+        raise HTTPException(status_code=400, detail="Invalid department format")
+
+=======
+>>>>>>> origin/master
     query = f"u_department={department}" if department else ""
     res = await sn.get_incidents(limit=limit, query=query)
     if "result" in res and isinstance(res["result"], list):
