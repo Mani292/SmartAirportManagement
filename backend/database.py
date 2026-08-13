@@ -252,11 +252,20 @@ def init_db() -> None:
                 ("DL910","Delta Air Lines","ATL","SJC","15:20","19:45","Delayed","A3","Terminal 2","ATC","Air traffic control delay at origin"),
                 ("SW234","Southwest Airlines","PHX","SJC","16:00","17:20","On Time","B2","Terminal 1","",""),
             ]
+<<<<<<< HEAD
+            for _f in _flights:
+                c.execute(
+                    "INSERT INTO u_flight (sys_id, flight_number, airline, origin, destination, scheduled_dep, scheduled_arr, status, gate, terminal, disruption_type, disruption_msg) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (str(_fu.uuid4()),) + _f
+                )
+=======
             c.executemany(
                 "INSERT INTO u_flight (sys_id, flight_number, airline, origin, destination, scheduled_dep, scheduled_arr, status, gate, terminal, disruption_type, disruption_msg) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 [(str(_fu.uuid4()),) + _f for _f in _flights]
             )
+>>>>>>> origin/master
 
         # ── SLA Breach Log ─────────────────────────────────────────────────────
         c.execute(

@@ -1,12 +1,22 @@
+<<<<<<< HEAD
+import servicenow as sn
+from fastapi import APIRouter, Depends
+=======
 import re
 import servicenow as sn
 from fastapi import APIRouter, Depends, HTTPException, status
+>>>>>>> origin/master
 from routers.auth import get_current_user
 from routers.incidents import cleanup_snow_record
 from logger.audit import log_audit
 
 router = APIRouter()
 
+<<<<<<< HEAD
+
+@router.get("/tasks/{assigned_to}")
+async def get_my_tasks(assigned_to: str, user: dict = Depends(get_current_user)):
+=======
 def validate_assigned_to(assigned_to: str):
     if not re.match(r"^[a-zA-Z0-9 _-]+$", assigned_to):
         raise HTTPException(
@@ -18,6 +28,7 @@ def validate_assigned_to(assigned_to: str):
 @router.get("/tasks/{assigned_to}")
 async def get_my_tasks(assigned_to: str, user: dict = Depends(get_current_user)):
     validate_assigned_to(assigned_to)
+>>>>>>> origin/master
     query = f"assigned_to={assigned_to}^state!=6^state!=7"
     res = await sn.get_incidents(query=query)
     log_audit(user["username"], "GET_TASKS", f"Target: {assigned_to}")
@@ -28,7 +39,10 @@ async def get_my_tasks(assigned_to: str, user: dict = Depends(get_current_user))
 
 @router.get("/stats/{assigned_to}")
 async def get_my_stats(assigned_to: str, user: dict = Depends(get_current_user)):
+<<<<<<< HEAD
+=======
     validate_assigned_to(assigned_to)
+>>>>>>> origin/master
     all_tasks = await sn.get_incidents(query=f"assigned_to={assigned_to}", limit=100)
     if "result" in all_tasks and isinstance(all_tasks["result"], list):
         all_tasks["result"] = [cleanup_snow_record(r) for r in all_tasks["result"]]

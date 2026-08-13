@@ -36,6 +36,15 @@ def test_health():
 
 
 def test_root_has_version():
+<<<<<<< HEAD
+    """Root endpoint must return version and docs link."""
+    res = client.get("/")
+    assert res.status_code == 200
+    data = res.json()
+    assert "version" in data
+    assert "docs" in data
+    assert "auth" in data
+=======
     """Root endpoint must return expected keys and values."""
     res = client.get("/")
     assert res.status_code == 200
@@ -47,6 +56,7 @@ def test_root_has_version():
     assert data["redoc"] == "/redoc"
     assert "auth" in data
     assert "problem_statement" in data
+>>>>>>> origin/master
 
 
 def test_assets_fallback():

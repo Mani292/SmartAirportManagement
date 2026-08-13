@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+import pytest
+=======
+>>>>>>> origin/master
 from services.predictive_ai import predict_maintenance_need
 
 def test_predict_maintenance_need_high_risk():
