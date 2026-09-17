@@ -773,4 +773,3 @@ def db_log_sla_breach(airport_id: str, incident_id: str, incident_number: str,
         conn.commit()
     finally:
         conn.close()
-
