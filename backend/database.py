@@ -41,21 +41,12 @@ def init_db() -> None:
             )
         """)
         # Specific CMDB child tables
-        c.execute(
-            "CREATE TABLE IF NOT EXISTS u_hvac_system (sys_id TEXT PRIMARY KEY, u_airport_id TEXT, cooling_capacity TEXT)"
-        )
-        c.execute(
-            "CREATE TABLE IF NOT EXISTS u_baggage_system (sys_id TEXT PRIMARY KEY, u_airport_id TEXT, belt_length TEXT)"
-        )
-        c.execute(
-            "CREATE TABLE IF NOT EXISTS u_runway (sys_id TEXT PRIMARY KEY, u_airport_id TEXT, surface_type TEXT)"
-        )
-        c.execute(
-            "CREATE TABLE IF NOT EXISTS u_escalator (sys_id TEXT PRIMARY KEY, u_airport_id TEXT, steps_count INTEGER)"
-        )
-        c.execute(
-            "CREATE TABLE IF NOT EXISTS u_digital_display (sys_id TEXT PRIMARY KEY, u_airport_id TEXT, resolution TEXT)"
-        )
+        c.execute("CREATE TABLE IF NOT EXISTS u_hvac_system (sys_id TEXT PRIMARY KEY, u_airport_id TEXT, cooling_capacity TEXT)")
+        c.execute("CREATE TABLE IF NOT EXISTS u_baggage_system (sys_id TEXT PRIMARY KEY, u_airport_id TEXT, belt_length TEXT)")
+        c.execute("CREATE TABLE IF NOT EXISTS u_runway (sys_id TEXT PRIMARY KEY, u_airport_id TEXT, surface_type TEXT)")
+        c.execute("CREATE TABLE IF NOT EXISTS u_escalator (sys_id TEXT PRIMARY KEY, u_airport_id TEXT, steps_count INTEGER)")
+        c.execute("CREATE TABLE IF NOT EXISTS u_digital_display (sys_id TEXT PRIMARY KEY, u_airport_id TEXT, resolution TEXT)")
+
 
         # Seed default assets if table is empty
         c.execute("SELECT COUNT(*) FROM u_airport_asset")
@@ -213,59 +204,18 @@ def init_db() -> None:
         if c.fetchone()[0] == 0:
             import uuid as _su
             from datetime import date as _d
-
             _today = _d.today().isoformat()
             for _s in [
-                (
-                    str(_su.uuid4()),
-                    "tech",
-                    "technician",
-                    "06:00",
-                    "14:00",
-                    "Terminal 1",
-                    "active",
-                ),
-                (
-                    str(_su.uuid4()),
-                    "electrician",
-                    "electrician",
-                    "06:00",
-                    "14:00",
-                    "Terminal 2",
-                    "active",
-                ),
-                (
-                    str(_su.uuid4()),
-                    "security",
-                    "security",
-                    "14:00",
-                    "22:00",
-                    "All Terminals",
-                    "scheduled",
-                ),
-                (
-                    str(_su.uuid4()),
-                    "plumber",
-                    "plumber",
-                    "06:00",
-                    "14:00",
-                    "Terminal 1",
-                    "active",
-                ),
-                (
-                    str(_su.uuid4()),
-                    "helpstaff",
-                    "helpstaff",
-                    "08:00",
-                    "16:00",
-                    "Terminal 2",
-                    "active",
-                ),
+                (str(_su.uuid4()), "tech",        "technician",  "06:00", "14:00", "Terminal 1",   "active"),
+                (str(_su.uuid4()), "electrician", "electrician", "06:00", "14:00", "Terminal 2",   "active"),
+                (str(_su.uuid4()), "security",    "security",    "14:00", "22:00", "All Terminals","scheduled"),
+                (str(_su.uuid4()), "plumber",     "plumber",     "06:00", "14:00", "Terminal 1",   "active"),
+                (str(_su.uuid4()), "helpstaff",   "helpstaff",   "08:00", "16:00", "Terminal 2",   "active"),
             ]:
                 c.execute(
                     "INSERT INTO u_shift (sys_id, u_airport_id, staff_username, role, shift_date, start_time, end_time, terminal, status) "
                     "VALUES (?, 'SJC-01', ?, ?, ?, ?, ?, ?, ?)",
-                    (_s[0], _s[1], _s[2], _today, _s[3], _s[4], _s[5], _s[6]),
+                    (_s[0], _s[1], _s[2], _today, _s[3], _s[4], _s[5], _s[6])
                 )
 
         # ── FIDS / Flights ─────────────────────────────────────────────────────
@@ -292,118 +242,30 @@ def init_db() -> None:
         c.execute("SELECT COUNT(*) FROM u_flight")
         if c.fetchone()[0] == 0:
             import uuid as _fu
-
             _flights = [
-                (
-                    "AA101",
-                    "American Airlines",
-                    "JFK",
-                    "SJC",
-                    "08:00",
-                    "11:30",
-                    "On Time",
-                    "A12",
-                    "Terminal 1",
-                    "",
-                    "",
-                ),
-                (
-                    "UA204",
-                    "United Airlines",
-                    "LAX",
-                    "SJC",
-                    "09:15",
-                    "10:45",
-                    "Delayed",
-                    "B5",
-                    "Terminal 2",
-                    "Weather",
-                    "Heavy fog causing 45-min delay",
-                ),
-                (
-                    "DL330",
-                    "Delta Air Lines",
-                    "ORD",
-                    "SJC",
-                    "10:00",
-                    "13:20",
-                    "On Time",
-                    "C3",
-                    "Terminal 1",
-                    "",
-                    "",
-                ),
-                (
-                    "SW412",
-                    "Southwest Airlines",
-                    "LAS",
-                    "SJC",
-                    "11:30",
-                    "12:50",
-                    "Cancelled",
-                    "A7",
-                    "Terminal 1",
-                    "Mechanical",
-                    "Aircraft mechanical issue — rebooking at counter A7",
-                ),
-                (
-                    "AA567",
-                    "American Airlines",
-                    "DFW",
-                    "SJC",
-                    "12:45",
-                    "15:30",
-                    "Boarding",
-                    "B9",
-                    "Terminal 2",
-                    "",
-                    "",
-                ),
-                (
-                    "UA789",
-                    "United Airlines",
-                    "SEA",
-                    "SJC",
-                    "14:00",
-                    "16:10",
-                    "On Time",
-                    "C1",
-                    "Terminal 1",
-                    "",
-                    "",
-                ),
-                (
-                    "DL910",
-                    "Delta Air Lines",
-                    "ATL",
-                    "SJC",
-                    "15:20",
-                    "19:45",
-                    "Delayed",
-                    "A3",
-                    "Terminal 2",
-                    "ATC",
-                    "Air traffic control delay at origin",
-                ),
-                (
-                    "SW234",
-                    "Southwest Airlines",
-                    "PHX",
-                    "SJC",
-                    "16:00",
-                    "17:20",
-                    "On Time",
-                    "B2",
-                    "Terminal 1",
-                    "",
-                    "",
-                ),
+                ("AA101","American Airlines","JFK","SJC","08:00","11:30","On Time","A12","Terminal 1","",""),
+                ("UA204","United Airlines","LAX","SJC","09:15","10:45","Delayed","B5","Terminal 2","Weather","Heavy fog causing 45-min delay"),
+                ("DL330","Delta Air Lines","ORD","SJC","10:00","13:20","On Time","C3","Terminal 1","",""),
+                ("SW412","Southwest Airlines","LAS","SJC","11:30","12:50","Cancelled","A7","Terminal 1","Mechanical","Aircraft mechanical issue — rebooking at counter A7"),
+                ("AA567","American Airlines","DFW","SJC","12:45","15:30","Boarding","B9","Terminal 2","",""),
+                ("UA789","United Airlines","SEA","SJC","14:00","16:10","On Time","C1","Terminal 1","",""),
+                ("DL910","Delta Air Lines","ATL","SJC","15:20","19:45","Delayed","A3","Terminal 2","ATC","Air traffic control delay at origin"),
+                ("SW234","Southwest Airlines","PHX","SJC","16:00","17:20","On Time","B2","Terminal 1","",""),
             ]
+<<<<<<< HEAD
+            for _f in _flights:
+                c.execute(
+                    "INSERT INTO u_flight (sys_id, flight_number, airline, origin, destination, scheduled_dep, scheduled_arr, status, gate, terminal, disruption_type, disruption_msg) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (str(_fu.uuid4()),) + _f
+                )
+=======
             c.executemany(
                 "INSERT INTO u_flight (sys_id, flight_number, airline, origin, destination, scheduled_dep, scheduled_arr, status, gate, terminal, disruption_type, disruption_msg) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                [(str(_fu.uuid4()),) + _f for _f in _flights],
+                [(str(_fu.uuid4()),) + _f for _f in _flights]
             )
+>>>>>>> origin/master
 
         # ── SLA Breach Log ─────────────────────────────────────────────────────
         c.execute(
@@ -443,12 +305,10 @@ ALLOWED_ASSET_FIELDS = {
 }
 
 
-def db_get_assets(airport_id: str = "SJC-01") -> list[dict]:
+def db_get_assets(airport_id: str = 'SJC-01') -> list[dict]:
     conn = get_connection()
     try:
-        rows = conn.execute(
-            "SELECT * FROM u_airport_asset WHERE u_airport_id = ?", (airport_id,)
-        ).fetchall()
+        rows = conn.execute("SELECT * FROM u_airport_asset WHERE u_airport_id = ?", (airport_id,)).fetchall()
         return [dict(r) for r in rows]
     finally:
         conn.close()
@@ -535,12 +395,10 @@ ALLOWED_TASK_FIELDS = {
 }
 
 
-def db_get_tasks(airport_id: str = "SJC-01") -> list[dict]:
+def db_get_tasks(airport_id: str = 'SJC-01') -> list[dict]:
     conn = get_connection()
     try:
-        rows = conn.execute(
-            "SELECT * FROM u_preventive_task WHERE u_airport_id = ?", (airport_id,)
-        ).fetchall()
+        rows = conn.execute("SELECT * FROM u_preventive_task WHERE u_airport_id = ?", (airport_id,)).fetchall()
         return [dict(r) for r in rows]
     finally:
         conn.close()
@@ -655,9 +513,7 @@ def db_create_qr_location(payload: dict) -> dict:
 # ══════════════════════════════════════════════════════════════════════════════
 
 
-def db_log_telemetry(
-    asset_id: str, temp: float, vib: float, hum: float, status: str
-) -> None:
+def db_log_telemetry(asset_id: str, temp: float, vib: float, hum: float, status: str) -> None:
     conn = get_connection()
     try:
         conn.execute(
@@ -686,28 +542,14 @@ def db_get_telemetry(asset_id: str, limit: int = 10) -> list[dict]:
 # ══════════════════════════════════════════════════════════════════════════════
 
 ALLOWED_WO_FIELDS = {
-    "title",
-    "description",
-    "assigned_team",
-    "assigned_to",
-    "priority",
-    "status",
-    "approval_status",
-    "approved_by",
-    "approval_notes",
-    "technician_notes",
-    "asset_id",
-    "location",
-    "sla_target",
-    "sn_work_order_sys_id",
-    "updated_at",
-    "closed_at",
+    "title", "description", "assigned_team", "assigned_to", "priority",
+    "status", "approval_status", "approved_by", "approval_notes",
+    "technician_notes", "asset_id", "location", "sla_target",
+    "sn_work_order_sys_id", "updated_at", "closed_at",
 }
 
 
-def db_get_work_orders(
-    airport_id: str = "SJC-01", status: str = "", assigned_to: str = ""
-) -> list[dict]:
+def db_get_work_orders(airport_id: str = "SJC-01", status: str = "", assigned_to: str = "") -> list[dict]:
     conn = get_connection()
     try:
         query = "SELECT * FROM u_work_order WHERE u_airport_id = ?"
@@ -728,9 +570,7 @@ def db_get_work_orders(
 def db_get_work_order(sys_id: str) -> dict | None:
     conn = get_connection()
     try:
-        row = conn.execute(
-            "SELECT * FROM u_work_order WHERE sys_id = ?", (sys_id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM u_work_order WHERE sys_id = ?", (sys_id,)).fetchone()
         return dict(row) if row else None
     finally:
         conn.close()
@@ -738,7 +578,6 @@ def db_get_work_order(sys_id: str) -> dict | None:
 
 def db_create_work_order(payload: dict) -> dict:
     import uuid
-
     payload.setdefault("sys_id", str(uuid.uuid4()))
     conn = get_connection()
     try:
@@ -766,7 +605,7 @@ def db_create_work_order(payload: dict) -> dict:
                 "location": payload.get("location", ""),
                 "sla_target": payload.get("sla_target", ""),
                 "created_by": payload.get("created_by", ""),
-            },
+            }
         )
         conn.commit()
         return db_get_work_order(payload["sys_id"]) or payload
@@ -803,12 +642,12 @@ def db_get_shifts(airport_id: str = "SJC-01", shift_date: str = "") -> list[dict
         if shift_date:
             rows = conn.execute(
                 "SELECT * FROM u_shift WHERE u_airport_id = ? AND shift_date = ? ORDER BY start_time",
-                (airport_id, shift_date),
+                (airport_id, shift_date)
             ).fetchall()
         else:
             rows = conn.execute(
                 "SELECT * FROM u_shift WHERE u_airport_id = ? ORDER BY shift_date DESC, start_time",
-                (airport_id,),
+                (airport_id,)
             ).fetchall()
         return [dict(r) for r in rows]
     finally:
@@ -817,7 +656,6 @@ def db_get_shifts(airport_id: str = "SJC-01", shift_date: str = "") -> list[dict
 
 def db_create_shift(payload: dict) -> dict:
     import uuid
-
     payload.setdefault("sys_id", str(uuid.uuid4()))
     conn = get_connection()
     try:
@@ -835,13 +673,11 @@ def db_create_shift(payload: dict) -> dict:
                 "end_time": payload.get("end_time", ""),
                 "terminal": payload.get("terminal", ""),
                 "status": payload.get("status", "scheduled"),
-            },
+            }
         )
         conn.commit()
         conn2 = get_connection()
-        row = conn2.execute(
-            "SELECT * FROM u_shift WHERE sys_id = ?", (payload["sys_id"],)
-        ).fetchone()
+        row = conn2.execute("SELECT * FROM u_shift WHERE sys_id = ?", (payload["sys_id"],)).fetchone()
         conn2.close()
         return dict(row) if row else payload
     finally:
@@ -855,14 +691,9 @@ def db_update_shift(sys_id: str, updates: dict) -> dict | None:
         safe = {k: v for k, v in updates.items() if k in allowed}
         if safe:
             fields = ", ".join(f"{k} = ?" for k in safe)
-            conn.execute(
-                f"UPDATE u_shift SET {fields} WHERE sys_id = ?",
-                list(safe.values()) + [sys_id],
-            )
+            conn.execute(f"UPDATE u_shift SET {fields} WHERE sys_id = ?", list(safe.values()) + [sys_id])
             conn.commit()
-        row = conn.execute(
-            "SELECT * FROM u_shift WHERE sys_id = ?", (sys_id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM u_shift WHERE sys_id = ?", (sys_id,)).fetchone()
         return dict(row) if row else None
     finally:
         conn.close()
@@ -879,12 +710,12 @@ def db_get_flights(airport_id: str = "SJC-01", status: str = "") -> list[dict]:
         if status:
             rows = conn.execute(
                 "SELECT * FROM u_flight WHERE u_airport_id = ? AND status = ? ORDER BY scheduled_dep",
-                (airport_id, status),
+                (airport_id, status)
             ).fetchall()
         else:
             rows = conn.execute(
                 "SELECT * FROM u_flight WHERE u_airport_id = ? ORDER BY scheduled_dep",
-                (airport_id,),
+                (airport_id,)
             ).fetchall()
         return [dict(r) for r in rows]
     finally:
@@ -892,28 +723,15 @@ def db_get_flights(airport_id: str = "SJC-01", status: str = "") -> list[dict]:
 
 
 def db_update_flight(sys_id: str, updates: dict) -> dict | None:
-    allowed = {
-        "status",
-        "actual_dep",
-        "actual_arr",
-        "gate",
-        "disruption_type",
-        "disruption_msg",
-        "updated_at",
-    }
+    allowed = {"status", "actual_dep", "actual_arr", "gate", "disruption_type", "disruption_msg", "updated_at"}
     conn = get_connection()
     try:
         safe = {k: v for k, v in updates.items() if k in allowed}
         safe["updated_at"] = __import__("datetime").datetime.now().isoformat()
         fields = ", ".join(f"{k} = ?" for k in safe)
-        conn.execute(
-            f"UPDATE u_flight SET {fields} WHERE sys_id = ?",
-            list(safe.values()) + [sys_id],
-        )
+        conn.execute(f"UPDATE u_flight SET {fields} WHERE sys_id = ?", list(safe.values()) + [sys_id])
         conn.commit()
-        row = conn.execute(
-            "SELECT * FROM u_flight WHERE sys_id = ?", (sys_id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM u_flight WHERE sys_id = ?", (sys_id,)).fetchone()
         return dict(row) if row else None
     finally:
         conn.close()
@@ -924,9 +742,7 @@ def db_update_flight(sys_id: str, updates: dict) -> dict | None:
 # ══════════════════════════════════════════════════════════════════════════════
 
 
-def db_get_audit_logs(
-    airport_id: str = "SJC-01", actor: str = "", action: str = "", limit: int = 100
-) -> list[dict]:
+def db_get_audit_logs(airport_id: str = "SJC-01", actor: str = "", action: str = "", limit: int = 100) -> list[dict]:
     conn = get_connection()
     try:
         query = "SELECT * FROM u_audit_log WHERE u_airport_id = ?"
@@ -945,29 +761,14 @@ def db_get_audit_logs(
         conn.close()
 
 
-def db_log_sla_breach(
-    airport_id: str,
-    incident_id: str,
-    incident_number: str,
-    priority: str,
-    sla_threshold: int,
-    breach_minutes: int,
-    team: str,
-) -> None:
+def db_log_sla_breach(airport_id: str, incident_id: str, incident_number: str,
+                      priority: str, sla_threshold: int, breach_minutes: int, team: str) -> None:
     conn = get_connection()
     try:
         conn.execute(
             "INSERT INTO u_sla_breach_log (u_airport_id, incident_id, incident_number, priority, sla_threshold, breach_minutes, team) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (
-                airport_id,
-                incident_id,
-                incident_number,
-                priority,
-                sla_threshold,
-                breach_minutes,
-                team,
-            ),
+            (airport_id, incident_id, incident_number, priority, sla_threshold, breach_minutes, team)
         )
         conn.commit()
     finally:
